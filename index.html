@@ -1,0 +1,64 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Leave Request</title>
+  <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+  <style>
+    body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial;padding:18px;line-height:1.45}
+    .muted{opacity:.7;font-size:13px;margin-top:6px;white-space:pre-wrap}
+  </style>
+</head>
+<body>
+  <div id="status">Initializing...</div>
+  <div id="detail" class="muted"></div>
+
+<script>
+const LIFF_ID = "2008997153-OdZGJzVg";
+
+const FORM_BASE =
+  "https://docs.google.com/forms/d/e/1FAIpQLSe1GWPWpmEkox64GCknndWQSYJdXPgy46qHhazSkD5tTHiT8w/viewform?usp=pp_url";
+const ENTRY_USERID = "entry.1293379294";
+const ENTRY_NAME   = "entry.2082356442";
+
+const $status = (t)=>document.getElementById("status").textContent=t;
+const $detail = (t)=>document.getElementById("detail").textContent=t||"";
+
+function buildFormUrl(userId, displayName){
+  const u = new URL(FORM_BASE);
+  u.searchParams.set(ENTRY_USERID, userId);
+  u.searchParams.set(ENTRY_NAME, displayName);
+  return u.toString();
+}
+
+(async ()=>{
+  try{
+    $status("1) liff.init...");
+    await liff.init({ liffId: LIFF_ID, withLoginOnExternalBrowser: true });
+
+    $status("2) checking...");
+    $detail(`inClient=${liff.isInClient()} | loggedIn=${liff.isLoggedIn()}`);
+
+    if(!liff.isLoggedIn()){
+      $status("3) login...");
+      liff.login({ redirectUri: location.href });
+      return;
+    }
+
+    $status("4) getProfile...");
+    const p = await liff.getProfile();
+    const formUrl = buildFormUrl(p.userId, p.displayName);
+
+    $status("5) open form...");
+    liff.openWindow({ url: formUrl, external: true });
+
+  }catch(e){
+    console.error(e);
+    $status("ERROR");
+    $detail(e?.message || String(e));
+  }
+})();
+</script>
+</body>
+</html>

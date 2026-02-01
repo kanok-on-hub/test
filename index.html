@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0, viewport-fit=cover" />
-  <title>Leave Request Form</title>
+  <title>Smart Leave Request</title>
   <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
   <script src="https://cdn.tailwindcss.com"></script>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -39,31 +39,35 @@
     <div class="space-y-3">
       <label class="text-sm font-bold text-slate-700 ml-1">Leave Type <span class="text-red-500">*</span></label>
       <div class="grid grid-cols-2 gap-3">
-        <button type="button" onclick="selectType(this, 'Sick')" class="type-btn"><span class="text-2xl block mb-1">🤒</span><span class="font-semibold text-slate-700">Sick</span></button>
-        <button type="button" onclick="selectType(this, 'Annual')" class="type-btn"><span class="text-2xl block mb-1">🏖️</span><span class="font-semibold text-slate-700">Annual</span></button>
-        <button type="button" onclick="selectType(this, 'Personal')" class="type-btn"><span class="text-2xl block mb-1">🚗</span><span class="font-semibold text-slate-700">Personal</span></button>
-        <button type="button" onclick="selectType(this, 'Other')" class="type-btn"><span class="text-2xl block mb-1">📝</span><span class="font-semibold text-slate-700">Other</span></button>
+        <button type="button" onclick="selectType(this, 'Sick')" class="type-btn">🤒 <span class="font-semibold text-slate-700">Sick</span></button>
+        <button type="button" onclick="selectType(this, 'Annual')" class="type-btn">🏖️ <span class="font-semibold text-slate-700">Annual</span></button>
+        <button type="button" onclick="selectType(this, 'Personal')" class="type-btn">🚗 <span class="font-semibold text-slate-700">Personal</span></button>
+        <button type="button" onclick="selectType(this, 'Other')" class="type-btn">📝 <span class="font-semibold text-slate-700">Other</span></button>
       </div>
       <input type="hidden" id="leaveTypeValue">
     </div>
 
     <div id="otherField" class="hidden animate-in space-y-2">
-      <label class="text-sm font-bold text-blue-600 ml-1">Please specify Other type <span class="text-red-500">*</span></label>
-      <input type="text" id="otherSpecify" class="input-field border-blue-100" placeholder="e.g. Ordination, Marriage, etc.">
+      <label class="text-sm font-bold text-blue-600 ml-1 italic">Please specify Other type *</label>
+      <input type="text" id="otherSpecify" class="input-field border-blue-100" placeholder="e.g. Ordination">
     </div>
 
     <div class="card-section space-y-4">
-      <label class="text-sm font-bold text-slate-700 block">Date Range <span class="text-red-500">*</span></label>
+      <div class="flex justify-between items-center">
+        <label class="text-sm font-bold text-slate-700">Date <span class="text-red-500">*</span></label>
+        <span id="dayCount" class="text-[10px] font-bold bg-blue-100 text-blue-600 px-2 py-1 rounded-full hidden">0 Days</span>
+      </div>
       <div class="grid grid-cols-2 gap-4">
         <div>
-          <span class="text-[10px] uppercase font-bold text-slate-400 block mb-1 ml-1">Start Date</span>
+          <span class="text-[10px] uppercase font-bold text-slate-400 block mb-1">Start Date</span>
           <input type="date" id="startDate" onchange="validateOnFly()" class="input-field text-center">
         </div>
         <div>
-          <span class="text-[10px] uppercase font-bold text-slate-400 block mb-1 ml-1">End Date</span>
+          <span class="text-[10px] uppercase font-bold text-slate-400 block mb-1">End Date</span>
           <input type="date" id="endDate" onchange="validateOnFly()" class="input-field text-center">
         </div>
       </div>
+      <p class="text-[10px] text-slate-400 italic font-medium">* Weekends and holidays will be automatically excluded.</p>
     </div>
 
     <div class="card-section space-y-3">
@@ -83,12 +87,10 @@
 
     <div id="fileCard" class="card-section border-dashed border-2 flex items-center justify-between cursor-pointer" onclick="document.getElementById('fileInput').click()">
       <div class="flex items-center gap-3">
-        <div class="w-10 h-10 bg-blue-50 rounded-full flex items-center justify-center text-blue-500">
-          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"></path></svg>
-        </div>
+        <div class="w-10 h-10 bg-blue-50 rounded-full flex items-center justify-center text-blue-500">📎</div>
         <div>
           <p id="fileTitle" class="text-sm font-bold text-slate-700">Attachment (Optional)</p>
-          <p id="fileSubtitle" class="text-[10px] text-slate-400 italic">Required if Sick Leave ≥ 3 days</p>
+          <p id="fileSubtitle" class="text-[10px] text-slate-400 italic">Medical Cert. required for Sick ≥ 3 working days</p>
         </div>
       </div>
       <input type="file" id="fileInput" class="hidden" onchange="handleFileChange(this)">
@@ -96,7 +98,7 @@
   </div>
 
   <div class="sticky-bottom">
-    <button id="submitBtn" onclick="handleSubmit()" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-4 rounded-2xl font-bold text-lg shadow-lg shadow-blue-200 transition-all active:scale-[0.98]">
+    <button id="submitBtn" onclick="handleSubmit()" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-4 rounded-2xl font-bold text-lg shadow-lg">
       Submit
     </button>
   </div>
@@ -104,26 +106,22 @@
 
 <div id="loader" class="fixed inset-0 bg-white/80 backdrop-blur-sm z-[100] flex flex-col items-center justify-center hidden">
   <div class="w-10 h-10 border-4 border-slate-200 border-t-blue-600 rounded-full animate-spin mb-3"></div>
-  <p class="font-bold text-slate-600">Submitting...</p>
+  <p class="font-bold text-slate-600 italic">Calculating & Submitting...</p>
 </div>
 
 <script>
-  const LIFF_ID = "2008997153-OdZGJzVg";
-  let userProfile = null;
+  const LIFF_ID = "2008997153-OdZGJzVg"; //
+  const API_URL = "YOUR_APPS_SCRIPT_URL"; // URL จาก Google Apps Script
+  let companyHolidays = []; // จะถูกโหลดจาก Sheets
 
   function selectType(btn, val) {
     document.querySelectorAll('.type-btn').forEach(b => b.classList.remove('selected'));
     btn.classList.add('selected');
     document.getElementById('leaveTypeValue').value = val;
     
-    // Toggle Other Specify Field
     const otherField = document.getElementById('otherField');
-    if (val === 'Other') {
-      otherField.classList.remove('hidden');
-    } else {
-      otherField.classList.add('hidden');
-      document.getElementById('otherSpecify').value = '';
-    }
+    if (val === 'Other') otherField.classList.remove('hidden');
+    else { otherField.classList.add('hidden'); document.getElementById('otherSpecify').value = ''; }
     validateOnFly();
   }
 
@@ -137,47 +135,69 @@
 
   function handleFileChange(input) {
     if(input.files[0]) {
-      document.getElementById('fileTitle').innerText = input.files[0].name.substring(0, 15) + "...";
-      document.getElementById('fileTitle').classList.add('text-blue-600');
+        document.getElementById('fileTitle').innerText = input.files[0].name.substring(0, 15) + "...";
+        document.getElementById('fileTitle').classList.add('text-blue-600');
     }
     validateOnFly();
   }
 
   function validateOnFly() {
-    const s = new Date(document.getElementById('startDate').value);
-    const e = new Date(document.getElementById('endDate').value);
-    const days = Math.ceil((e - s) / 86400000) + 1;
+    const sInput = document.getElementById('startDate').value;
+    const eInput = document.getElementById('endDate').value;
+    if(!sInput || !eInput) return true;
+
+    const s = new Date(sInput);
+    const e = new Date(eInput);
     const type = document.getElementById('leaveTypeValue').value;
     const file = document.getElementById('fileInput').files[0];
     const card = document.getElementById('fileCard');
+    const dayBadge = document.getElementById('dayCount');
 
-    // Logic: Sick >= 3 days needs attachment
-    if (type === 'Sick' && days >= 3 && !file) {
+    let totalWorkingDays = 0;
+    let current = new Date(s);
+
+    // Loop คำนวณหักเสาร์-อาทิตย์ และวันหยุดบริษัท
+    while (current <= e) {
+      const dateStr = current.toISOString().split('T')[0];
+      const dayOfWeek = current.getDay();
+      const isWeekend = (dayOfWeek === 0 || dayOfWeek === 6);
+      const isHoliday = companyHolidays.includes(dateStr);
+
+      if (!isWeekend && !isHoliday) totalWorkingDays++;
+      current.setDate(current.getDate() + 1);
+    }
+
+    dayBadge.innerText = `${totalWorkingDays} Working Days`;
+    dayBadge.classList.remove('hidden');
+
+    // Logic บังคับแนบไฟล์ป่วย >= 3 วันทำงาน
+    if (type === 'Sick' && totalWorkingDays >= 3 && !file) {
       card.classList.add('field-error');
-      document.getElementById('fileTitle').innerText = "Medical Certificate Required! *";
+      document.getElementById('fileTitle').innerText = "Medical Cert. Required! *";
       document.getElementById('fileTitle').classList.add('text-red-600');
       return false;
     }
     card.classList.remove('field-error');
     document.getElementById('fileTitle').classList.remove('text-red-600');
+    if(!file) document.getElementById('fileTitle').innerText = "Attachment (Optional)";
     return true;
   }
 
   async function handleSubmit() {
     const type = document.getElementById('leaveTypeValue').value;
-    const otherSpec = document.getElementById('otherSpecify').value.trim();
     const reason = document.getElementById('reason').value.trim();
+    const otherSpec = document.getElementById('otherSpecify').value.trim();
     
     if(!type) return alert("Please select Leave Type");
-    if(type === 'Other' && !otherSpec) return alert("Please specify the type of 'Other' leave");
+    if(type === 'Other' && !otherSpec) return alert("Please specify the 'Other' leave type");
     if(!reason) return alert("Please specify reason");
-    if(!validateOnFly()) return alert("Attachment is required for sick leave >= 3 days");
+    if(!validateOnFly()) return alert("Attachment required for Sick Leave >= 3 working days");
 
     document.getElementById('loader').classList.remove('hidden');
     
-    // Success Simulation
+    // ตรงนี้คือจุดส่งข้อมูลไป Google Sheets
     setTimeout(() => {
-      alert("✅ Your request has been submitted!");
+      alert("✅ Request Submitted!");
       document.getElementById('loader').classList.add('hidden');
       liff.closeWindow();
     }, 2000);
@@ -185,15 +205,20 @@
 
   liff.init({ liffId: LIFF_ID }).then(async () => {
     if(!liff.isLoggedIn()) liff.login();
-    userProfile = await liff.getProfile();
-    document.getElementById('userGreet').innerText = `Hi, ${userProfile.displayName}`;
-    if(userProfile.pictureUrl) {
-      document.getElementById('profileImg').src = userProfile.pictureUrl;
+    const p = await liff.getProfile();
+    document.getElementById('userGreet').innerText = `Hi, ${p.displayName}`;
+    if(p.pictureUrl) {
+      document.getElementById('profileImg').src = p.pictureUrl;
       document.getElementById('avatarBox').classList.remove('hidden');
     }
+    
+    // โหลดวันหยุดบริษัทจาก Apps Script (ถ้าทำแบบเชื่อม Sheet)
+    // fetch(API_URL + "?action=getHolidays").then(res => res.json()).then(data => { companyHolidays = data; });
+
     const today = new Date().toISOString().split('T')[0];
     document.getElementById('startDate').value = today;
     document.getElementById('endDate').value = today;
+    validateOnFly();
   });
 </script>
 </body>

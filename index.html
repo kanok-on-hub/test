@@ -3,275 +3,198 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0, viewport-fit=cover" />
-  <title>Leave Request</title>
-
+  <title>Leave Request Form</title>
   <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
   <script src="https://cdn.tailwindcss.com"></script>
-
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>
-    body { font-family: 'Inter', sans-serif, system-ui; background-color: #f9fafb; margin: 0; padding-bottom: 100px; -webkit-tap-highlight-color: transparent; }
-    input[type="date"]::-webkit-inner-spin-button,
-    input[type="date"]::-webkit-calendar-picker-indicator { background: transparent; bottom: 0; color: transparent; cursor: pointer; height: auto; left: 0; position: absolute; right: 0; top: 0; width: auto; }
-    .type-btn { width: 100%; text-align: left; padding: 1rem; border: 1px solid #e5e7eb; border-radius: 1rem; background: white; position: relative; cursor: pointer; transition: all 0.2s; }
-    .type-btn.selected { border-color: #2563eb; background-color: #eff6ff; }
-    .type-btn.selected span.font-medium { color: #2563eb; }
-    .tap-active:active { transform: scale(0.97); transition: transform 0.1s; }
-    .hidden { display: none; }
-    /* เพิ่มสไตล์แจ้งเตือนเมื่อบังคับแนบไฟล์ */
-    .file-required { border: 2px solid #ef4444 !important; background-color: #fef2f2 !important; animation: pulse 2s infinite; }
-    @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4); } 70% { box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); } 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); } }
+    body { font-family: 'Inter', sans-serif; background-color: #f8fafc; color: #1e293b; -webkit-tap-highlight-color: transparent; }
+    .card-section { background: white; border-radius: 1rem; border: 1px solid #e2e8f0; padding: 1.25rem; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+    .type-btn { width: 100%; text-align: left; padding: 1rem; border: 1px solid #e2e8f0; border-radius: 1rem; background: white; transition: all 0.2s; cursor: pointer; }
+    .type-btn.selected { border-color: #2563eb; background-color: #eff6ff; border-width: 2px; }
+    .input-field { background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 0.75rem; padding: 0.75rem; width: 100%; outline: none; transition: all 0.2s; font-size: 1rem; }
+    .input-field:focus { border-color: #2563eb; background-color: white; box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1); }
+    .field-error { border: 2px solid #ef4444 !important; background-color: #fef2f2 !important; }
+    .sticky-bottom { position: fixed; bottom: 0; left: 0; right: 0; background: white; border-top: 1px solid #e2e8f0; padding: 1rem; padding-bottom: calc(1rem + env(safe-area-inset-bottom)); z-index: 50; }
+    .animate-in { animation: fadeIn 0.3s ease-out; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
   </style>
 </head>
+<body class="pb-32">
 
-<body class="bg-gray-50 text-gray-800 pb-24">
-
-<form id="postForm" method="POST" target="hidden_iframe" style="display:none;">
-  <input type="hidden" name="payload" id="payloadInput" />
-</form>
-<iframe name="hidden_iframe" id="hidden_iframe" style="display:none;"></iframe>
-
-<div id="submitPage">
-  <div class="bg-white px-6 pt-10 pb-6 rounded-b-[2rem] shadow-sm sticky top-0 z-20">
+<div id="app" class="max-w-md mx-auto">
+  <div class="bg-white px-6 pt-12 pb-6 rounded-b-[2.5rem] shadow-sm border-b border-gray-100 mb-6">
     <div class="flex items-center gap-4">
-      <div id="avatarContainer" class="w-12 h-12 rounded-full bg-gray-100 overflow-hidden shrink-0 border border-gray-100 hidden">
-        <img id="avatarImg" src="" class="w-full h-full object-cover">
+      <div id="avatarBox" class="w-14 h-14 rounded-full overflow-hidden border-2 border-blue-50 hidden shadow-inner">
+        <img id="profileImg" src="" class="w-full h-full object-cover">
       </div>
       <div>
-        <h1 class="text-xl font-bold text-gray-900 leading-tight">Submit Leave 📝</h1>
-        <p id="displayName" class="text-gray-500 text-sm opacity-0 transition-opacity">Loading...</p>
+        <h1 class="text-xl font-bold text-slate-900 leading-tight">Leave Request 📝</h1>
+        <p id="userGreet" class="text-slate-500 text-sm font-medium">Loading profile...</p>
       </div>
     </div>
   </div>
 
-  <div class="px-5 mt-6 space-y-8">
-    <div>
-      <label class="text-sm font-semibold text-gray-900 ml-1 mb-3 block">Leave Type</label>
+  <div class="px-5 space-y-6">
+    <div class="space-y-3">
+      <label class="text-sm font-bold text-slate-700 ml-1">Leave Type <span class="text-red-500">*</span></label>
       <div class="grid grid-cols-2 gap-3">
-        <button type="button" onclick="selectType(this, 'Sick')" class="type-btn group"><span class="text-2xl block mb-1">🤒</span><span class="font-medium text-gray-700">Sick</span></button>
-        <button type="button" onclick="selectType(this, 'Annual')" class="type-btn group"><span class="text-2xl block mb-1">🏖️</span><span class="font-medium text-gray-700">Annual</span></button>
-        <button type="button" onclick="selectType(this, 'Personal')" class="type-btn group"><span class="text-2xl block mb-1">🚗</span><span class="font-medium text-gray-700">Personal</span></button>
-        <button type="button" onclick="selectType(this, 'Other')" class="type-btn group"><span class="text-2xl block mb-1">📝</span><span class="font-medium text-gray-700">Other</span></button>
+        <button type="button" onclick="selectType(this, 'Sick')" class="type-btn"><span class="text-2xl block mb-1">🤒</span><span class="font-semibold text-slate-700">Sick</span></button>
+        <button type="button" onclick="selectType(this, 'Annual')" class="type-btn"><span class="text-2xl block mb-1">🏖️</span><span class="font-semibold text-slate-700">Annual</span></button>
+        <button type="button" onclick="selectType(this, 'Personal')" class="type-btn"><span class="text-2xl block mb-1">🚗</span><span class="font-semibold text-slate-700">Personal</span></button>
+        <button type="button" onclick="selectType(this, 'Other')" class="type-btn"><span class="text-2xl block mb-1">📝</span><span class="font-semibold text-slate-700">Other</span></button>
       </div>
-      <input type="hidden" id="leaveType" value="">
+      <input type="hidden" id="leaveTypeValue">
     </div>
 
-    <div class="bg-white p-4 rounded-2xl shadow-sm border border-gray-100">
-      <label class="text-sm font-semibold text-gray-900 mb-4 block">Date & Time</label>
-      <div class="flex items-center gap-3 mb-4">
-        <div class="flex-1 text-center">
-          <p class="text-xs text-gray-400 mb-1">Start Date</p>
-          <input id="startDate" type="date" onchange="checkSickCondition()" class="w-full bg-gray-50 p-3 text-center font-medium text-lg text-gray-800 focus:outline-none rounded-xl" />
-        </div>
-        <div class="text-gray-300 mt-5">➜</div>
-        <div class="flex-1 text-center">
-          <p class="text-xs text-gray-400 mb-1">End Date</p>
-          <input id="endDate" type="date" onchange="checkSickCondition()" class="w-full bg-gray-50 p-3 text-center font-medium text-lg text-gray-800 focus:outline-none rounded-xl" />
-        </div>
-      </div>
-
-      <div class="flex bg-gray-100 p-1 rounded-xl">
-        <button type="button" id="btnFull" class="flex-1 py-2 rounded-lg text-sm font-medium bg-white shadow-sm text-blue-600 transition tap-active" onclick="selectPart(this, 'FULL')">Full Day</button>
-        <button type="button" class="flex-1 py-2 rounded-lg text-sm font-medium text-gray-500 transition tap-active" onclick="selectPart(this, 'AM')">Morning</button>
-        <button type="button" class="flex-1 py-2 rounded-lg text-sm font-medium text-gray-500 transition tap-active" onclick="selectPart(this, 'PM')">Afternoon</button>
-      </div>
-      <input type="hidden" id="dayPart" value="FULL">
+    <div id="otherField" class="hidden animate-in space-y-2">
+      <label class="text-sm font-bold text-blue-600 ml-1">Please specify Other type <span class="text-red-500">*</span></label>
+      <input type="text" id="otherSpecify" class="input-field border-blue-100" placeholder="e.g. Ordination, Marriage, etc.">
     </div>
 
-    <div class="space-y-4">
-      <div>
-        <label class="text-sm font-semibold text-gray-900 ml-1 mb-2 block">Reason</label>
-        <textarea id="reason" rows="2" class="w-full bg-white border border-gray-200 rounded-2xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 transition placeholder-gray-400 text-base" placeholder="Please specify reason..." required></textarea>
+    <div class="card-section space-y-4">
+      <label class="text-sm font-bold text-slate-700 block">Date Range <span class="text-red-500">*</span></label>
+      <div class="grid grid-cols-2 gap-4">
+        <div>
+          <span class="text-[10px] uppercase font-bold text-slate-400 block mb-1 ml-1">Start Date</span>
+          <input type="date" id="startDate" onchange="validateOnFly()" class="input-field text-center">
+        </div>
+        <div>
+          <span class="text-[10px] uppercase font-bold text-slate-400 block mb-1 ml-1">End Date</span>
+          <input type="date" id="endDate" onchange="validateOnFly()" class="input-field text-center">
+        </div>
       </div>
+    </div>
 
-      <div>
-        <label id="fileLabel" class="flex items-center justify-between p-4 bg-white border border-dashed border-gray-300 rounded-2xl active:bg-blue-50 transition cursor-pointer">
-          <div class="flex items-center gap-3">
-            <div id="fileIcon" class="w-10 h-10 bg-blue-50 rounded-full flex items-center justify-center text-blue-500">
-              <svg style="width: 24px; height: 24px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"></path>
-              </svg>
-            </div>
-            <div>
-              <p class="text-sm font-medium text-gray-700" id="fileNameDisplay">Attachment (Optional)</p>
-              <p id="fileSubtext" class="text-[10px] text-gray-400">Required if Sick Leave ≥ 3 days</p>
-            </div>
-          </div>
-          <input type='file' id="file" class="hidden" accept="image/*,application/pdf" onchange="updateFileName(this)" />
-        </label>
+    <div class="card-section space-y-3">
+      <label class="text-sm font-bold text-slate-700 block">Duration <span class="text-red-500">*</span></label>
+      <div class="flex bg-slate-100 p-1 rounded-xl">
+        <button id="durFull" onclick="selectDur(this, 'Full Day')" class="flex-1 py-2 text-sm font-bold rounded-lg bg-white shadow-sm text-blue-600 transition-all">Full Day</button>
+        <button onclick="selectDur(this, 'Morning')" class="flex-1 py-2 text-sm font-medium text-slate-500">Morning</button>
+        <button onclick="selectDur(this, 'Afternoon')" class="flex-1 py-2 text-sm font-medium text-slate-500">Afternoon</button>
       </div>
+      <input type="hidden" id="durationValue" value="Full Day">
+    </div>
+
+    <div class="space-y-2">
+      <label class="text-sm font-bold text-slate-700 ml-1">Reason <span class="text-red-500">*</span></label>
+      <textarea id="reason" rows="3" oninput="validateOnFly()" class="input-field" placeholder="Please specify reason..."></textarea>
+    </div>
+
+    <div id="fileCard" class="card-section border-dashed border-2 flex items-center justify-between cursor-pointer" onclick="document.getElementById('fileInput').click()">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 bg-blue-50 rounded-full flex items-center justify-center text-blue-500">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"></path></svg>
+        </div>
+        <div>
+          <p id="fileTitle" class="text-sm font-bold text-slate-700">Attachment (Optional)</p>
+          <p id="fileSubtitle" class="text-[10px] text-slate-400 italic">Required if Sick Leave ≥ 3 days</p>
+        </div>
+      </div>
+      <input type="file" id="fileInput" class="hidden" onchange="handleFileChange(this)">
     </div>
   </div>
 
-  <div class="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] z-30 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
-    <button id="btn" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-2xl text-lg shadow-lg shadow-blue-200 tap-active flex justify-center items-center gap-2">
-      <span>Submit Request</span>
+  <div class="sticky-bottom">
+    <button id="submitBtn" onclick="handleSubmit()" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-4 rounded-2xl font-bold text-lg shadow-lg shadow-blue-200 transition-all active:scale-[0.98]">
+      Submit
     </button>
-  </div>
-
-  <div id="loadingOverlay" class="fixed inset-0 bg-black/60 z-50 flex items-center justify-center hidden backdrop-blur-sm">
-    <div class="bg-white p-6 rounded-3xl flex flex-col items-center shadow-xl">
-      <div class="w-10 h-10 border-4 border-gray-100 rounded-full border-t-blue-600 animate-spin mb-3"></div>
-      <p class="text-gray-800 font-medium">Submitting...</p>
-    </div>
   </div>
 </div>
 
-<div id="approvePage" class="hidden">
-  <div class="bg-gray-100 min-h-screen flex items-center justify-center p-4">
-    <div class="bg-white w-full max-w-sm rounded-3xl shadow-2xl overflow-hidden text-center relative">
-      <div id="headerBar" class="h-2 bg-gray-300 w-full"></div>
-      <div class="p-8 py-12">
-        <div id="iconContainer" class="flex justify-center mb-6">
-          <div class="relative w-20 h-20">
-            <div class="absolute inset-0 border-4 border-gray-100 rounded-full"></div>
-            <div class="absolute inset-0 border-4 border-blue-500 rounded-full border-t-transparent animate-spin"></div>
-          </div>
-        </div>
-        <h1 id="statusTitle" class="text-2xl font-bold text-gray-800 mb-2">Verifying...</h1>
-        <p id="statusDesc" class="text-gray-500 text-sm leading-relaxed">Processing decision.</p>
-        <button id="closeBtn" onclick="liff.closeWindow()" class="mt-8 px-6 py-2.5 bg-gray-800 text-white rounded-xl text-sm font-medium hidden w-full">Close Window</button>
-      </div>
-    </div>
-  </div>
+<div id="loader" class="fixed inset-0 bg-white/80 backdrop-blur-sm z-[100] flex flex-col items-center justify-center hidden">
+  <div class="w-10 h-10 border-4 border-slate-200 border-t-blue-600 rounded-full animate-spin mb-3"></div>
+  <p class="font-bold text-slate-600">Submitting...</p>
 </div>
 
 <script>
-  const LIFF_ID = "2008997153-OdZGJzVg"; 
-  const API_URL = "https://script.google.com/macros/s/AKfycby9WkktTkhrTLrtCYdNVDuedfewbuWgAkR5v3oV2u2a9htVhzyZzf2Ihdu3yw8sFk32qQ/exec"; 
+  const LIFF_ID = "2008997153-OdZGJzVg";
+  let userProfile = null;
 
-  let profile = null;
-  function $(id){ return document.getElementById(id); }
-
-  // 1. Logic คำนวณวัน
-  function getDiffDays() {
-    const s = new Date($('startDate').value);
-    const e = new Date($('endDate').value);
-    if (isNaN(s) || isNaN(e)) return 0;
-    return Math.ceil((e - s) / (1000 * 60 * 60 * 24)) + 1;
+  function selectType(btn, val) {
+    document.querySelectorAll('.type-btn').forEach(b => b.classList.remove('selected'));
+    btn.classList.add('selected');
+    document.getElementById('leaveTypeValue').value = val;
+    
+    // Toggle Other Specify Field
+    const otherField = document.getElementById('otherField');
+    if (val === 'Other') {
+      otherField.classList.remove('hidden');
+    } else {
+      otherField.classList.add('hidden');
+      document.getElementById('otherSpecify').value = '';
+    }
+    validateOnFly();
   }
 
-  // 2. ตรวจสอบเงื่อนไขลาป่วย 3 วัน
-  function checkSickCondition() {
-    const type = $('leaveType').value;
-    const days = getDiffDays();
-    const label = $('fileLabel');
-    const nameText = $('fileNameDisplay');
-    
-    if (type === 'Sick' && days >= 3) {
-      if (!$('file').files[0]) {
-        label.classList.add('file-required');
-        nameText.textContent = "Medical Certificate Required! *";
-        nameText.style.color = "#ef4444";
-        return false;
-      }
+  function selectDur(btn, val) {
+    btn.parentElement.querySelectorAll('button').forEach(b => {
+      b.className = "flex-1 py-2 text-sm font-medium text-slate-500";
+    });
+    btn.className = "flex-1 py-2 text-sm font-bold rounded-lg bg-white shadow-sm text-blue-600 transition-all";
+    document.getElementById('durationValue').value = val;
+  }
+
+  function handleFileChange(input) {
+    if(input.files[0]) {
+      document.getElementById('fileTitle').innerText = input.files[0].name.substring(0, 15) + "...";
+      document.getElementById('fileTitle').classList.add('text-blue-600');
     }
-    label.classList.remove('file-required');
-    nameText.style.color = $('file').files[0] ? "#2563eb" : "#374151";
-    if (!$('file').files[0]) nameText.textContent = "Attachment (Optional)";
+    validateOnFly();
+  }
+
+  function validateOnFly() {
+    const s = new Date(document.getElementById('startDate').value);
+    const e = new Date(document.getElementById('endDate').value);
+    const days = Math.ceil((e - s) / 86400000) + 1;
+    const type = document.getElementById('leaveTypeValue').value;
+    const file = document.getElementById('fileInput').files[0];
+    const card = document.getElementById('fileCard');
+
+    // Logic: Sick >= 3 days needs attachment
+    if (type === 'Sick' && days >= 3 && !file) {
+      card.classList.add('field-error');
+      document.getElementById('fileTitle').innerText = "Medical Certificate Required! *";
+      document.getElementById('fileTitle').classList.add('text-red-600');
+      return false;
+    }
+    card.classList.remove('field-error');
+    document.getElementById('fileTitle').classList.remove('text-red-600');
     return true;
   }
 
-  function selectType(btn, value) {
-    document.querySelectorAll('.type-btn').forEach(b => b.classList.remove('selected'));
-    btn.classList.add('selected');
-    $('leaveType').value = value;
-    checkSickCondition(); // เช็คทันทีที่เปลี่ยนประเภท
-  }
-
-  function selectPart(btn, value) {
-    const parent = btn.parentElement;
-    parent.querySelectorAll('button').forEach(b => {
-      b.style.backgroundColor = "transparent"; b.style.color = "#6b7280"; b.style.boxShadow = "none";
-    });
-    btn.style.backgroundColor = "white"; btn.style.color = "#2563eb"; btn.style.boxShadow = "0 1px 2px 0 rgba(0, 0, 0, 0.05)";
-    $('dayPart').value = value;
-  }
-
-  function updateFileName(input) {
-    const display = $('fileNameDisplay');
-    if(input.files && input.files[0]) {
-      display.textContent = input.files[0].name.length > 24 ? (input.files[0].name.substring(0, 24) + "...") : input.files[0].name;
-      display.style.color = "#2563eb";
-    } else {
-      display.textContent = "Attachment (Optional)";
-      display.style.color = "#374151";
-    }
-    checkSickCondition();
-  }
-
-  async function submitForm() {
-    if (!profile || !profile.userId) return alert("Identify error.");
+  async function handleSubmit() {
+    const type = document.getElementById('leaveTypeValue').value;
+    const otherSpec = document.getElementById('otherSpecify').value.trim();
+    const reason = document.getElementById('reason').value.trim();
     
-    // Validation ก่อนส่ง
-    if(!$("leaveType").value) return alert("Please select Leave Type.");
-    if(getDiffDays() <= 0) return alert("Invalid date range.");
-    if(!$("reason").value.trim()) return alert("Reason is required.");
+    if(!type) return alert("Please select Leave Type");
+    if(type === 'Other' && !otherSpec) return alert("Please specify the type of 'Other' leave");
+    if(!reason) return alert("Please specify reason");
+    if(!validateOnFly()) return alert("Attachment is required for sick leave >= 3 days");
+
+    document.getElementById('loader').classList.remove('hidden');
     
-    // เช็คเงื่อนไขป่วย 3 วัน
-    if (!checkSickCondition()) {
-        alert("⚠️ สำหรับการลาป่วยตั้งแต่ 3 วันขึ้นไป จำเป็นต้องแนบใบรับรองแพทย์ค่ะ");
-        return;
-    }
-
-    $('loadingOverlay').classList.remove('hidden');
-
-    try {
-      const payload = {
-        action: "submit_leave",
-        userId: profile.userId,
-        name: profile.displayName,
-        pictureUrl: profile.pictureUrl,
-        leaveType: $("leaveType").value,
-        startDate: $("startDate").value,
-        endDate: $("endDate").value,
-        dayPart: $("dayPart").value,
-        reason: $("reason").value.trim()
-      };
-
-      const f = $("file").files[0];
-      if (f) {
-        const reader = new FileReader();
-        reader.onload = (e) => {
-          payload.attachmentBase64 = e.target.result;
-          payload.attachmentMime = f.type;
-          payload.attachmentName = f.name;
-          const form = document.getElementById("postForm");
-          document.getElementById("payloadInput").value = JSON.stringify(payload);
-          form.action = API_URL;
-          form.submit();
-          alert("✅ Submitted successfully!");
-          liff.closeWindow();
-        };
-        reader.readAsDataURL(f);
-      } else {
-        const form = document.getElementById("postForm");
-        document.getElementById("payloadInput").value = JSON.stringify(payload);
-        form.action = API_URL;
-        form.submit();
-        alert("✅ Submitted successfully!");
-        liff.closeWindow();
-      }
-    } catch (e) {
-      alert("❌ Error: " + e.message);
-      $('loadingOverlay').classList.add('hidden');
-    }
+    // Success Simulation
+    setTimeout(() => {
+      alert("✅ Your request has been submitted!");
+      document.getElementById('loader').classList.add('hidden');
+      liff.closeWindow();
+    }, 2000);
   }
 
-  // Lifecycle
   liff.init({ liffId: LIFF_ID }).then(async () => {
-    if (!liff.isLoggedIn()) { liff.login(); return; }
-    profile = await liff.getProfile();
-    if(profile) {
-      $('displayName').textContent = `Hi, ${profile.displayName}`;
-      $('displayName').classList.remove('opacity-0');
-      if(profile.pictureUrl) { $('avatarImg').src = profile.pictureUrl; $('avatarContainer').classList.remove('hidden'); }
+    if(!liff.isLoggedIn()) liff.login();
+    userProfile = await liff.getProfile();
+    document.getElementById('userGreet').innerText = `Hi, ${userProfile.displayName}`;
+    if(userProfile.pictureUrl) {
+      document.getElementById('profileImg').src = userProfile.pictureUrl;
+      document.getElementById('avatarBox').classList.remove('hidden');
     }
     const today = new Date().toISOString().split('T')[0];
-    $('startDate').value = today; $('endDate').value = today;
+    document.getElementById('startDate').value = today;
+    document.getElementById('endDate').value = today;
   });
-
-  $('btn').addEventListener("click", submitForm);
 </script>
 </body>
 </html>

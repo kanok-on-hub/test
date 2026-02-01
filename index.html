@@ -48,7 +48,7 @@
     </div>
 
     <div id="otherField" class="hidden animate-in space-y-2">
-      <label class="text-sm font-bold text-blue-600 ml-1 italic">Please specify Other type *</label>
+      <label class="text-sm font-bold text-blue-600 ml-1 italic font-medium">Please specify Other type *</label>
       <input type="text" id="otherSpecify" class="input-field border-blue-100" placeholder="e.g. Ordination">
     </div>
 
@@ -67,7 +67,9 @@
           <input type="date" id="endDate" onchange="validateOnFly()" class="input-field text-center">
         </div>
       </div>
-      <p class="text-[10px] text-slate-400 italic font-medium">* Weekends and holidays will be automatically excluded.</p>
+      <p class="text-[10px] text-slate-400 italic font-medium leading-relaxed">
+        * Weekends and company holidays will be automatically excluded from calculation.
+      </p>
     </div>
 
     <div class="card-section space-y-3">
@@ -90,7 +92,7 @@
         <div class="w-10 h-10 bg-blue-50 rounded-full flex items-center justify-center text-blue-500">📎</div>
         <div>
           <p id="fileTitle" class="text-sm font-bold text-slate-700">Attachment (Optional)</p>
-          <p id="fileSubtitle" class="text-[10px] text-slate-400 italic">Medical Cert. required for Sick ≥ 3 working days</p>
+          <p id="fileSubtitle" class="text-[10px] text-slate-400 italic font-medium">Required for Sick Leave ≥ 3 working days</p>
         </div>
       </div>
       <input type="file" id="fileInput" class="hidden" onchange="handleFileChange(this)">
@@ -106,13 +108,13 @@
 
 <div id="loader" class="fixed inset-0 bg-white/80 backdrop-blur-sm z-[100] flex flex-col items-center justify-center hidden">
   <div class="w-10 h-10 border-4 border-slate-200 border-t-blue-600 rounded-full animate-spin mb-3"></div>
-  <p class="font-bold text-slate-600 italic">Calculating & Submitting...</p>
+  <p class="font-bold text-slate-600">Processing...</p>
 </div>
 
 <script>
-  const LIFF_ID = "2008997153-OdZGJzVg"; //
-  const API_URL = "YOUR_APPS_SCRIPT_URL"; // URL จาก Google Apps Script
-  let companyHolidays = []; // จะถูกโหลดจาก Sheets
+  const LIFF_ID = "2008997153-OdZGJzVg";
+  // สมมติวันหยุดบริษัท (ตัวอย่าง)
+  let companyHolidays = ["2026-04-13", "2026-04-14", "2026-04-15"]; 
 
   function selectType(btn, val) {
     document.querySelectorAll('.type-btn').forEach(b => b.classList.remove('selected'));
@@ -156,7 +158,7 @@
     let totalWorkingDays = 0;
     let current = new Date(s);
 
-    // Loop คำนวณหักเสาร์-อาทิตย์ และวันหยุดบริษัท
+    // 
     while (current <= e) {
       const dateStr = current.toISOString().split('T')[0];
       const dayOfWeek = current.getDay();
@@ -167,10 +169,10 @@
       current.setDate(current.getDate() + 1);
     }
 
-    dayBadge.innerText = `${totalWorkingDays} Working Days`;
+    dayBadge.innerText = `${totalWorkingDays} Working Day(s)`;
     dayBadge.classList.remove('hidden');
 
-    // Logic บังคับแนบไฟล์ป่วย >= 3 วันทำงาน
+    // บังคับแนบไฟล์ถ้า "วันลาจริง" >= 3
     if (type === 'Sick' && totalWorkingDays >= 3 && !file) {
       card.classList.add('field-error');
       document.getElementById('fileTitle').innerText = "Medical Cert. Required! *";
@@ -195,9 +197,8 @@
 
     document.getElementById('loader').classList.remove('hidden');
     
-    // ตรงนี้คือจุดส่งข้อมูลไป Google Sheets
     setTimeout(() => {
-      alert("✅ Request Submitted!");
+      alert("✅ Submitted Successfully!");
       document.getElementById('loader').classList.add('hidden');
       liff.closeWindow();
     }, 2000);
@@ -211,10 +212,6 @@
       document.getElementById('profileImg').src = p.pictureUrl;
       document.getElementById('avatarBox').classList.remove('hidden');
     }
-    
-    // โหลดวันหยุดบริษัทจาก Apps Script (ถ้าทำแบบเชื่อม Sheet)
-    // fetch(API_URL + "?action=getHolidays").then(res => res.json()).then(data => { companyHolidays = data; });
-
     const today = new Date().toISOString().split('T')[0];
     document.getElementById('startDate').value = today;
     document.getElementById('endDate').value = today;

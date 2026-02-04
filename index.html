@@ -111,15 +111,17 @@
   </div>
 </div>
 
-<!-- Hidden iframe for submit + PM calls -->
+<!-- Hidden iframe for submit -->
 <iframe id="submitFrame" name="submitFrame" class="hidden"></iframe>
 
 <!-- ✅ Minimal Success Modal -->
 <div id="successModal" class="fixed inset-0 hidden items-center justify-center z-[999]">
   <div class="absolute inset-0 bg-black/40"></div>
+
   <div class="relative w-[92%] max-w-sm bg-white rounded-3xl p-6 shadow-xl text-center">
     <div class="text-2xl font-extrabold text-slate-900">Saved Successfully ✅</div>
     <div class="mt-2 text-sm text-slate-600">Your request has been submitted.</div>
+
     <button type="button"
             class="mt-6 w-full bg-blue-600 text-white py-3 rounded-2xl font-bold text-lg"
             onclick="doneAndExit()">
@@ -131,15 +133,14 @@
 <script>
   // ======= SET THESE 2 VALUES ONLY =======
   const LIFF_ID = "2008997153-OdZGJzVg";
-  const API_URL  = "https://script.google.com/macros/s/AKfycbw3PCZGZG_puGPUY_FdDYAR765UUs8Wr2ERJDzXmOz-nOLt_V25JkUSdrWXNFNk3-h4/exec"; // .../exec
+  const API_URL = "https://script.google.com/macros/s/AKfycby9WkktTkhrTLrtCYdNVDuedfewbuWgAkR5v3oV2u2a9htVhzyZzf2Ihdu3yw8sFk32qQ/exec";
   // ======================================
 
   let companyHolidays = [];
   let userProfile = null;
-  let pendingRequestId = "";
 
-  // internal flags
-  let gotSubmitResponse = false;
+  // requestId used for verification when no postMessage received
+  let pendingRequestId = "";
 
   const $ = (id) => document.getElementById(id);
 
@@ -174,6 +175,24 @@
     }
   }
 
+  // ✅ wait for holidays ready (fix badge calc showing wrong days)
+  function waitForHolidays(timeoutMs = 3000) {
+    return new Promise((resolve) => {
+      const start = Date.now();
+      const timer = setInterval(() => {
+        if (Array.isArray(companyHolidays) && companyHolidays.length > 0) {
+          clearInterval(timer);
+          resolve(true);
+          return;
+        }
+        if (Date.now() - start > timeoutMs) {
+          clearInterval(timer);
+          resolve(false);
+        }
+      }, 100);
+    });
+  }
+
   function selectType(btn, val) {
     document.querySelectorAll('.type-btn').forEach(b => b.classList.remove('selected'));
     btn.classList.add('selected');
@@ -205,13 +224,14 @@
     validateOnFly();
   }
 
-  // ✅ Holiday load via iframe PM (NO CORS)
+  // ✅ Fetch holidays via iframe (no CORS), then use postMessage result
   async function fetchHolidays() {
     try {
       const frame = document.getElementById("submitFrame");
       frame.src = API_URL + "?action=get_holidays_pm&t=" + Date.now();
     } catch (e) {
       companyHolidays = [];
+      console.warn("Holiday fetch failed, continue without holiday list");
     }
   }
 
@@ -227,7 +247,7 @@
       const dow = cur.getDay();
       const isWeekend = (dow === 0 || dow === 6);
       const dateStr = cur.toISOString().split('T')[0];
-      const isHoliday = companyHolidays.includes(dateStr);
+      const isHoliday = Array.isArray(companyHolidays) && companyHolidays.includes(dateStr);
       if (!isWeekend && !isHoliday) total++;
       cur.setDate(cur.getDate() + 1);
     }
@@ -239,6 +259,16 @@
     const s = $('startDate').value;
     const e = $('endDate').value;
     const badge = $('dayBadge');
+
+    // ✅ If holidays not ready yet, do NOT calculate wrong number
+    if (!Array.isArray(companyHolidays) || companyHolidays.length === 0) {
+      if (s && e) {
+        badge.textContent = "Loading holidays...";
+        badge.classList.remove('hidden');
+      }
+      // don't block submit based on medical rule until holidays loaded
+      return true;
+    }
 
     if (s && e) {
       const days = calcWorkingDays(s, e);
@@ -281,7 +311,6 @@
     Object.keys(extraFields || {}).forEach(k => add(k, extraFields[k]));
 
     const fileInput = $("fileInput");
-    fileInput.setAttribute("name", "file"); // backend รับได้ทุก field name แต่กำหนดให้ชัวร์
     form.appendChild(fileInput);
 
     document.body.appendChild(form);
@@ -294,9 +323,9 @@
       try { document.body.removeChild(form); } catch(e) {}
     }, 300);
 
-    // ✅ If no postMessage within 12 sec => verify via iframe PM (NO CORS)
-    setTimeout(() => {
-      const loaderVisible = !$("loader").classList.contains("hidden");
+    // If no postMessage within 12 sec => verify saved by requestId
+    setTimeout(async () => {
+      const loaderVisible = !document.getElementById("loader").classList.contains("hidden");
       if (!loaderVisible) return;
 
       if (!pendingRequestId) {
@@ -305,31 +334,23 @@
         return;
       }
 
-      const frame = document.getElementById("submitFrame");
-      frame.src = API_URL
-        + "?action=check_request_pm"
-        + "&requestId=" + encodeURIComponent(pendingRequestId)
-        + "&t=" + Date.now();
+      try {
+        const res = await fetch(API_URL + "?action=check_request&requestId=" + encodeURIComponent(pendingRequestId) + "&t=" + Date.now());
+        const data = await res.json();
 
-      // ✅ fail-open: ถ้า verify ก็ยังไม่กลับ ให้ขึ้น success เลย (เพราะส่วนใหญ่ save แล้ว)
-      setTimeout(() => {
-        const still = !$("loader").classList.contains("hidden");
-        if (still) {
+        if (data && data.ok && data.found) {
           hideLoader();
           openSuccessModal();
+          return;
         }
-      }, 8000);
 
-    }, 12000);
-
-    // ✅ Safety timeout กันหมุนค้างยาว ๆ
-    setTimeout(() => {
-      const loaderVisible = !$("loader").classList.contains("hidden");
-      if (loaderVisible) {
         hideLoader();
-        openSuccessModal(); // fail-open
+        alert("No response. Cannot confirm saved. Please try again.");
+      } catch (e) {
+        hideLoader();
+        alert("No response. Verification failed. Please try again.");
       }
-    }, 25000);
+    }, 12000);
   }
 
   async function handleSubmit() {
@@ -343,17 +364,22 @@
     if (type === 'Other' && !otherSpec) return alert("Please specify Other type");
     if (!startDate || !endDate) return alert("Please select dates");
     if (!reason) return alert("Please specify reason");
+
+    // ✅ now we enforce medical rule only if holidays loaded
+    if (!Array.isArray(companyHolidays) || companyHolidays.length === 0) {
+      alert("Holiday list is still loading. Please wait 1-2 seconds and try again.");
+      return;
+    }
     if (!validateOnFly()) return alert("Medical Certificate required!");
 
     pendingRequestId = uuidv4();
-    gotSubmitResponse = false;
-
     showLoader("Submitting...");
 
     buildAndSubmitForm("submit_leave", {
       requestId: pendingRequestId,
       userId: userProfile?.userId || "",
       name: userProfile?.displayName || "",
+      pictureUrl: userProfile?.pictureUrl || "",
       leaveType: type,
       otherSpecify: otherSpec,
       startDate,
@@ -363,7 +389,7 @@
     });
   }
 
-  // ✅ Receive postMessage from backend via iframe
+  // Receive result from backend via postMessage (hidden iframe)
   window.addEventListener("message", (event) => {
     const frame = document.getElementById("submitFrame");
     if (!frame || event.source !== frame.contentWindow) return;
@@ -371,39 +397,19 @@
     const data = event.data || {};
     if (!data || data.app !== "leave_backend") return;
 
-    // Holiday list
+    // ✅ holidays response
     if (data.mode === "get_holidays") {
       companyHolidays = Array.isArray(data.holidays) ? data.holidays : [];
       validateOnFly();
       return;
     }
 
-    // Verify result
-    if (data.mode === "check_request") {
-      hideLoader();
-      if (data.found) openSuccessModal();
-      else openSuccessModal(); // fail-open ตาม requirement
-      return;
-    }
+    hideLoader();
 
-    // Submit/Approve result
-    if (data.mode === "submit_leave") {
-      gotSubmitResponse = true;
-      hideLoader();
-      if (data.ok) openSuccessModal();
-      else alert(data.error ? String(data.error) : "Submit failed");
-      return;
-    }
-
-    if (data.mode === "approve_leave") {
-      hideLoader();
-      if (data.ok) {
-        alert("✅ Status updated: " + (data.status || ""));
-        try { liff.closeWindow(); } catch(e) {}
-      } else {
-        alert(data.error ? String(data.error) : "Approve failed");
-      }
-      return;
+    if (data.ok) {
+      openSuccessModal();
+    } else {
+      alert(data.error ? String(data.error) : "Submit failed");
     }
   });
 
@@ -442,11 +448,15 @@
       $('avatarBox').classList.remove('hidden');
     }
 
+    $("fileInput").setAttribute("name", "file");
+
     const today = new Date().toISOString().split('T')[0];
     $('startDate').value = today;
     $('endDate').value = today;
 
-    await fetchHolidays(); // via iframe pm
+    // ✅ start fetching holidays and WAIT (max 3 sec) before first calc
+    await fetchHolidays();
+    await waitForHolidays(3000);
     validateOnFly();
 
     await handleApproveFlowIfAny();

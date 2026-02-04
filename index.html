@@ -20,6 +20,7 @@
 <body class="pb-28">
 <div class="max-w-md mx-auto">
 
+  <!-- Header -->
   <div class="bg-white px-6 pt-10 pb-6 rounded-b-[2.5rem] shadow-sm border-b border-gray-100 mb-6">
     <div class="flex items-center gap-4">
       <div id="avatarBox" class="w-14 h-14 rounded-full overflow-hidden border-2 border-blue-50 hidden">
@@ -32,9 +33,11 @@
     </div>
   </div>
 
+  <!-- Form -->
   <div class="px-5 space-y-6" id="formUI">
 
-    <div class="space-y-3">
+    <!-- Leave Type -->
+    <div class="space-y-2">
       <label class="text-sm font-bold text-slate-700 ml-1">Leave Type <span class="text-red-500">*</span></label>
       <div class="grid grid-cols-2 gap-3">
         <button type="button" onclick="selectType(this,'Sick')" class="type-btn">🤒 <b>Sick</b></button>
@@ -43,13 +46,19 @@
         <button type="button" onclick="selectType(this,'Other')" class="type-btn">📝 <b>Other</b></button>
       </div>
       <input type="hidden" id="leaveTypeValue">
+      <!-- Remaining Info -->
+      <div id="remainingBox" class="text-xs text-slate-500 ml-1 mt-1 hidden">
+        Remaining: <span id="remainingValue">-</span> days
+      </div>
     </div>
 
+    <!-- Other Type -->
     <div id="otherField" class="hidden space-y-2">
       <label class="text-sm font-bold text-blue-600 ml-1 italic">Please specify Other type *</label>
       <input type="text" id="otherSpecify" class="input" placeholder="e.g. Ordination">
     </div>
 
+    <!-- Date -->
     <div class="card space-y-3">
       <div class="flex items-center justify-between">
         <label class="text-sm font-bold text-slate-700">Date <span class="text-red-500">*</span></label>
@@ -67,9 +76,10 @@
         </div>
       </div>
 
-      <div class="text-[10px] text-slate-400 italic font-medium">* Weekends & Company Holidays excluded (holiday list optional).</div>
+      <div class="text-[10px] text-slate-400 italic font-medium">* Weekends & Company Holidays excluded.</div>
     </div>
 
+    <!-- Duration -->
     <div class="card space-y-2">
       <label class="text-sm font-bold text-slate-700 block">Duration <span class="text-red-500">*</span></label>
       <div class="flex bg-slate-100 p-1 rounded-xl">
@@ -80,11 +90,13 @@
       <input type="hidden" id="durationValue" value="Full Day">
     </div>
 
+    <!-- Reason -->
     <div class="space-y-2">
       <label class="text-sm font-bold text-slate-700 ml-1">Reason <span class="text-red-500">*</span></label>
       <textarea id="reason" rows="3" class="input" placeholder="Please specify reason..." oninput="validateOnFly()"></textarea>
     </div>
 
+    <!-- Attachment -->
     <div id="fileCard" class="card border-dashed border-2 flex items-center justify-between cursor-pointer"
          onclick="document.getElementById('fileInput').click()">
       <div class="flex items-center gap-3">
@@ -99,11 +111,13 @@
 
   </div>
 
+  <!-- Submit Button -->
   <div class="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 p-4 pb-[calc(1rem+env(safe-area-inset-bottom))]">
     <button id="submitBtn" onclick="handleSubmit()" class="w-full bg-blue-600 text-white py-4 rounded-2xl font-bold text-lg">Submit</button>
   </div>
 </div>
 
+<!-- Loader -->
 <div id="loader" class="fixed inset-0 bg-white/80 backdrop-blur-sm hidden items-center justify-center z-50">
   <div class="text-center">
     <div class="w-10 h-10 border-4 border-slate-200 border-t-blue-600 rounded-full animate-spin mx-auto mb-3"></div>
@@ -114,7 +128,7 @@
 <!-- Hidden iframe for submit -->
 <iframe id="submitFrame" name="submitFrame" class="hidden"></iframe>
 
-<!-- ✅ Minimal Success Modal -->
+<!-- Success Modal -->
 <div id="successModal" class="fixed inset-0 hidden items-center justify-center z-[999]">
   <div class="absolute inset-0 bg-black/40"></div>
 
@@ -131,14 +145,15 @@
 </div>
 
 <script>
-  // ======= SET THESE 2 VALUES ONLY =======
+  // ======= CONFIG (ปรับแค่ตรงนี้สองค่า) =======
   const LIFF_ID = "2008997153-OdZGJzVg";
   const API_URL = "https://script.google.com/macros/s/AKfycbw3PCZGZG_puGPUY_FdDYAR765UUs8Wr2ERJDzXmOz-nOLt_V25JkUSdrWXNFNk3-h4/exec";
-  // ======================================
+  // =============================================
 
   let companyHolidays = [];
   let userProfile = null;
   let pendingRequestId = "";   // for fallback check_request
+  let leaveBalances = {};      // type -> remaining days
 
   const $ = (id) => document.getElementById(id);
 
@@ -181,6 +196,7 @@
     if (val === 'Other') $('otherField').classList.remove('hidden');
     else { $('otherField').classList.add('hidden'); $('otherSpecify').value = ''; }
 
+    updateRemainingUI();
     validateOnFly();
   }
 
@@ -190,6 +206,7 @@
     });
     btn.className = "dur-btn flex-1 py-2 text-sm font-bold rounded-lg bg-white shadow-sm text-blue-600";
     $('durationValue').value = val;
+    validateOnFly();
   }
 
   function handleFileChange() {
@@ -204,7 +221,9 @@
     validateOnFly();
   }
 
-  // ✅ ใช้ fetch ดึง holiday list ตรง ๆ (Apps Script รองรับ CORS)
+  // ===== Holiday / Balance Fetch =====
+
+  // ใช้ fetch ดึง holiday list
   async function fetchHolidays() {
     try {
       const res = await fetch(API_URL + "?action=get_holidays&t=" + Date.now());
@@ -215,6 +234,52 @@
       console.warn("Holiday fetch failed, continue without holiday list", e);
     }
   }
+
+  // ดึง Leave Balance ของ user จาก backend
+  async function fetchLeaveBalance(userId) {
+    if (!userId) return;
+    try {
+      const res = await fetch(
+        API_URL + "?action=get_balance&userId=" + encodeURIComponent(userId) + "&t=" + Date.now()
+      );
+      const data = await res.json();
+      if (data && data.ok && Array.isArray(data.balances)) {
+        leaveBalances = {};
+        data.balances.forEach(b => {
+          if (!b || !b.type) return;
+          const key = String(b.type);
+          const remaining = Number(b.remaining);
+          leaveBalances[key] = isNaN(remaining) ? 0 : remaining;
+        });
+      }
+    } catch (e) {
+      console.warn("fetchLeaveBalance failed", e);
+      leaveBalances = {};
+    }
+    updateRemainingUI();
+  }
+
+  // อัปเดต UI ของ Remaining
+  function updateRemainingUI() {
+    const type = $('leaveTypeValue').value;
+    const box = $('remainingBox');
+    const valEl = $('remainingValue');
+
+    if (!type) {
+      box.classList.add('hidden');
+      return;
+    }
+    const remaining = (leaveBalances[type] != null) ? leaveBalances[type] : null;
+
+    if (remaining == null) {
+      box.classList.add('hidden');
+    } else {
+      valEl.textContent = remaining;
+      box.classList.remove('hidden');
+    }
+  }
+
+  // ===== Working Days =====
 
   function calcWorkingDays(sStr, eStr) {
     if (!sStr || !eStr) return 0;
@@ -235,39 +300,66 @@
     return total;
   }
 
+  // ===== Validation (รวม Medical Cert + Remaining) =====
+
   function validateOnFly() {
     const type = $('leaveTypeValue').value;
     const s = $('startDate').value;
     const e = $('endDate').value;
     const badge = $('dayBadge');
 
-    if (s && e) {
-      // ถ้า holiday ยังไม่โหลด ให้บอกสถานะเฉย ๆ
-      if (!Array.isArray(companyHolidays) || companyHolidays.length === 0) {
-        badge.textContent = "Loading holidays...";
-        badge.classList.remove('hidden');
-        return true;  // ยังไม่ enforce medical cert
-      }
+    // reset error state
+    $('startDate').classList.remove('err');
+    $('endDate').classList.remove('err');
+    $('fileCard').classList.remove('err');
+    $('fileTitle').classList.remove('text-red-600');
 
-      const days = calcWorkingDays(s, e);
-      badge.textContent = `${days} Working Days`;
-      badge.classList.remove('hidden');
-
-      const file = $('fileInput').files[0];
-      const card = $('fileCard');
-      if (type === 'Sick' && days >= 3 && !file) {
-        card.classList.add('err');
-        $('fileTitle').textContent = "Medical Cert. Required! *";
-        $('fileTitle').classList.add('text-red-600');
-        return false;
-      } else {
-        card.classList.remove('err');
-        $('fileTitle').classList.remove('text-red-600');
-        return true;
-      }
+    if (!s || !e) {
+      badge.classList.add('hidden');
+      return true;
     }
+
+    // ถ้ายังไม่มี holiday list → แค่แสดงข้อความ
+    if (!Array.isArray(companyHolidays) || companyHolidays.length === 0) {
+      badge.textContent = "Loading holidays...";
+      badge.classList.remove('hidden');
+      return true;
+    }
+
+    let days = calcWorkingDays(s, e);
+    // apply day part เหมือน backend
+    const dp = $('durationValue').value || "Full Day";
+    if ((dp === "Morning" || dp === "Afternoon") && days > 0) {
+      days -= 0.5;
+    }
+
+    badge.textContent = `${days} Working Days`;
+    badge.classList.remove('hidden');
+
+    // 1) Medical cert rule
+    const file = $('fileInput').files[0];
+    const card = $('fileCard');
+    if (type === 'Sick' && days >= 3 && !file) {
+      card.classList.add('err');
+      $('fileTitle').textContent = "Medical Cert. Required! *";
+      $('fileTitle').classList.add('text-red-600');
+      return false;
+    }
+
+    // 2) Remaining balance rule
+    const remaining = (type && leaveBalances[type] != null) ? leaveBalances[type] : null;
+    if (type && remaining != null && days > 0 && days > remaining) {
+      $('startDate').classList.add('err');
+      $('endDate').classList.add('err');
+      badge.textContent = `${days} Working Days • Exceeds remaining (${remaining})`;
+      alert(`Requested leave (${days} days) exceeds remaining balance (${remaining} days).`);
+      return false;
+    }
+
     return true;
   }
+
+  // ===== Submit =====
 
   function buildAndSubmitForm(action, extraFields) {
     const form = document.createElement("form");
@@ -301,7 +393,7 @@
       try { document.body.removeChild(form); } catch(e) {}
     }, 300);
 
-    // ถ้า 12 วิแล้วยังไม่มี postMessage ให้ลอง check_request
+    // fallback: 12 วิแล้วยังไม่ตอบ → check_request
     setTimeout(async () => {
       const loaderVisible = !document.getElementById("loader").classList.contains("hidden");
       if (!loaderVisible) return;
@@ -338,11 +430,14 @@
     const reason = $('reason').value.trim();
     const otherSpec = $('otherSpecify').value.trim();
 
-    if (!type) return alert("Please select Leave Type");
-    if (type === 'Other' && !otherSpec) return alert("Please specify Other type");
-    if (!startDate || !endDate) return alert("Please select dates");
-    if (!reason) return alert("Please specify reason");
-    if (!validateOnFly()) return alert("Medical Certificate required!");
+    if (!type) { alert("Please select Leave Type"); return; }
+    if (type === 'Other' && !otherSpec) { alert("Please specify Other type"); return; }
+    if (!startDate || !endDate) { alert("Please select dates"); return; }
+    if (!reason) { alert("Please specify reason"); return; }
+    if (!validateOnFly()) {
+      // validateOnFly จะ alert เองตามเคส (Medical / Remaining)
+      return;
+    }
 
     pendingRequestId = uuidv4();
     showLoader("Submitting...");
@@ -361,7 +456,7 @@
     });
   }
 
-  // รับผลลัพธ์จาก backend (submit/approve) ผ่าน iframe
+  // รับผลจาก backend ผ่าน iframe
   window.addEventListener("message", (event) => {
     const frame = document.getElementById("submitFrame");
     if (!frame || event.source !== frame.contentWindow) return;
@@ -378,6 +473,7 @@
     }
   });
 
+  // Approval flow (ถ้ามี query mode=approve)
   async function handleApproveFlowIfAny() {
     const params = new URLSearchParams(location.search);
     const mode = params.get("mode");
@@ -402,6 +498,8 @@
     }
   }
 
+  // ===== init LIFF =====
+
   async function init() {
     await liff.init({ liffId: LIFF_ID });
     if (!liff.isLoggedIn()) { liff.login(); return; }
@@ -419,7 +517,8 @@
     $('startDate').value = today;
     $('endDate').value = today;
 
-    // โหลด holiday แล้วค่อยคำนวณรอบแรก
+    // โหลด Leave Balance + Holidays แล้วค่อยคำนวณรอบแรก
+    await fetchLeaveBalance(userProfile.userId);
     await fetchHolidays();
     validateOnFly();
 

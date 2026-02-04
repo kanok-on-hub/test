@@ -133,14 +133,12 @@
 <script>
   // ======= SET THESE 2 VALUES ONLY =======
   const LIFF_ID = "2008997153-OdZGJzVg";
-  const API_URL = "https://script.google.com/macros/s/AKfycby9WkktTkhrTLrtCYdNVDuedfewbuWgAkR5v3oV2u2a9htVhzyZzf2Ihdu3yw8sFk32qQ/exec";
+  const API_URL = "https://script.google.com/macros/s/AKfycbw3PCZGZG_puGPUY_FdDYAR765UUs8Wr2ERJDzXmOz-nOLt_V25JkUSdrWXNFNk3-h4/exec";
   // ======================================
 
   let companyHolidays = [];
   let userProfile = null;
-
-  // requestId used for verification when no postMessage received
-  let pendingRequestId = "";
+  let pendingRequestId = "";   // for fallback check_request
 
   const $ = (id) => document.getElementById(id);
 
@@ -175,24 +173,6 @@
     }
   }
 
-  // ✅ wait for holidays ready (fix badge calc showing wrong days)
-  function waitForHolidays(timeoutMs = 3000) {
-    return new Promise((resolve) => {
-      const start = Date.now();
-      const timer = setInterval(() => {
-        if (Array.isArray(companyHolidays) && companyHolidays.length > 0) {
-          clearInterval(timer);
-          resolve(true);
-          return;
-        }
-        if (Date.now() - start > timeoutMs) {
-          clearInterval(timer);
-          resolve(false);
-        }
-      }, 100);
-    });
-  }
-
   function selectType(btn, val) {
     document.querySelectorAll('.type-btn').forEach(b => b.classList.remove('selected'));
     btn.classList.add('selected');
@@ -224,14 +204,15 @@
     validateOnFly();
   }
 
-  // ✅ Fetch holidays via iframe (no CORS), then use postMessage result
+  // ✅ ใช้ fetch ดึง holiday list ตรง ๆ (Apps Script รองรับ CORS)
   async function fetchHolidays() {
     try {
-      const frame = document.getElementById("submitFrame");
-      frame.src = API_URL + "?action=get_holidays_pm&t=" + Date.now();
+      const res = await fetch(API_URL + "?action=get_holidays&t=" + Date.now());
+      const data = await res.json();
+      companyHolidays = Array.isArray(data) ? data : [];
     } catch (e) {
       companyHolidays = [];
-      console.warn("Holiday fetch failed, continue without holiday list");
+      console.warn("Holiday fetch failed, continue without holiday list", e);
     }
   }
 
@@ -260,17 +241,14 @@
     const e = $('endDate').value;
     const badge = $('dayBadge');
 
-    // ✅ If holidays not ready yet, do NOT calculate wrong number
-    if (!Array.isArray(companyHolidays) || companyHolidays.length === 0) {
-      if (s && e) {
+    if (s && e) {
+      // ถ้า holiday ยังไม่โหลด ให้บอกสถานะเฉย ๆ
+      if (!Array.isArray(companyHolidays) || companyHolidays.length === 0) {
         badge.textContent = "Loading holidays...";
         badge.classList.remove('hidden');
+        return true;  // ยังไม่ enforce medical cert
       }
-      // don't block submit based on medical rule until holidays loaded
-      return true;
-    }
 
-    if (s && e) {
       const days = calcWorkingDays(s, e);
       badge.textContent = `${days} Working Days`;
       badge.classList.remove('hidden');
@@ -323,7 +301,7 @@
       try { document.body.removeChild(form); } catch(e) {}
     }, 300);
 
-    // If no postMessage within 12 sec => verify saved by requestId
+    // ถ้า 12 วิแล้วยังไม่มี postMessage ให้ลอง check_request
     setTimeout(async () => {
       const loaderVisible = !document.getElementById("loader").classList.contains("hidden");
       if (!loaderVisible) return;
@@ -364,12 +342,6 @@
     if (type === 'Other' && !otherSpec) return alert("Please specify Other type");
     if (!startDate || !endDate) return alert("Please select dates");
     if (!reason) return alert("Please specify reason");
-
-    // ✅ now we enforce medical rule only if holidays loaded
-    if (!Array.isArray(companyHolidays) || companyHolidays.length === 0) {
-      alert("Holiday list is still loading. Please wait 1-2 seconds and try again.");
-      return;
-    }
     if (!validateOnFly()) return alert("Medical Certificate required!");
 
     pendingRequestId = uuidv4();
@@ -389,20 +361,13 @@
     });
   }
 
-  // Receive result from backend via postMessage (hidden iframe)
+  // รับผลลัพธ์จาก backend (submit/approve) ผ่าน iframe
   window.addEventListener("message", (event) => {
     const frame = document.getElementById("submitFrame");
     if (!frame || event.source !== frame.contentWindow) return;
 
     const data = event.data || {};
     if (!data || data.app !== "leave_backend") return;
-
-    // ✅ holidays response
-    if (data.mode === "get_holidays") {
-      companyHolidays = Array.isArray(data.holidays) ? data.holidays : [];
-      validateOnFly();
-      return;
-    }
 
     hideLoader();
 
@@ -454,9 +419,8 @@
     $('startDate').value = today;
     $('endDate').value = today;
 
-    // ✅ start fetching holidays and WAIT (max 3 sec) before first calc
+    // โหลด holiday แล้วค่อยคำนวณรอบแรก
     await fetchHolidays();
-    await waitForHolidays(3000);
     validateOnFly();
 
     await handleApproveFlowIfAny();

@@ -18,6 +18,10 @@
     .sticky-bottom { position: fixed; bottom: 0; left: 0; right: 0; background: white; border-top: 1px solid #e2e8f0; padding: 1rem; padding-bottom: calc(1rem + env(safe-area-inset-bottom)); z-index: 50; }
     .animate-in { animation: fadeIn 0.3s ease-out; }
     @keyframes fadeIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+
+    /* Modal */
+    .modal-backdrop { position: fixed; inset: 0; background: rgba(15,23,42,0.35); display: none; align-items: center; justify-content: center; z-index: 200; padding: 16px; }
+    .modal { background: #fff; border-radius: 18px; padding: 18px; width: 100%; max-width: 420px; border: 1px solid #e2e8f0; box-shadow: 0 10px 30px rgba(0,0,0,0.15); }
   </style>
 </head>
 <body class="pb-32">
@@ -31,11 +35,12 @@
       <div>
         <h1 class="text-xl font-bold text-slate-900 leading-tight">Leave Request 📝</h1>
         <p id="userGreet" class="text-slate-500 text-sm font-medium">Loading profile...</p>
+        <p id="modeBadge" class="text-[10px] font-bold text-blue-600 mt-1 hidden"></p>
       </div>
     </div>
   </div>
 
-  <div class="px-5 space-y-6">
+  <div class="px-5 space-y-6" id="formArea">
     <div class="space-y-3">
       <label class="text-sm font-bold text-slate-700 ml-1">Leave Type <span class="text-red-500">*</span></label>
       <div class="grid grid-cols-2 gap-3">
@@ -75,9 +80,9 @@
     <div class="card-section space-y-3">
       <label class="text-sm font-bold text-slate-700 block">Duration <span class="text-red-500">*</span></label>
       <div class="flex bg-slate-100 p-1 rounded-xl">
-        <button id="durFull" onclick="selectDur(this, 'Full Day')" class="flex-1 py-2 text-sm font-bold rounded-lg bg-white shadow-sm text-blue-600 transition-all">Full Day</button>
-        <button onclick="selectDur(this, 'Morning')" class="flex-1 py-2 text-sm font-medium text-slate-500">Morning</button>
-        <button onclick="selectDur(this, 'Afternoon')" class="flex-1 py-2 text-sm font-medium text-slate-500">Afternoon</button>
+        <button id="durFull" type="button" onclick="selectDur(this, 'Full Day')" class="flex-1 py-2 text-sm font-bold rounded-lg bg-white shadow-sm text-blue-600 transition-all">Full Day</button>
+        <button type="button" onclick="selectDur(this, 'Morning')" class="flex-1 py-2 text-sm font-medium text-slate-500">Morning</button>
+        <button type="button" onclick="selectDur(this, 'Afternoon')" class="flex-1 py-2 text-sm font-medium text-slate-500">Afternoon</button>
       </div>
       <input type="hidden" id="durationValue" value="Full Day">
     </div>
@@ -99,7 +104,26 @@
     </div>
   </div>
 
-  <div class="sticky-bottom">
+  <!-- Approve UI (same page) -->
+  <div class="px-5 space-y-4 hidden" id="approveArea">
+    <div class="card-section">
+      <p class="text-sm font-bold text-slate-800">Approve / Reject</p>
+      <p class="text-xs text-slate-500 mt-1">
+        Request ID: <span id="approveReqId" class="font-mono text-slate-700"></span>
+      </p>
+      <p class="text-xs text-slate-500 mt-1">
+        Decision: <span id="approveDecision" class="font-bold"></span>
+      </p>
+      <button id="approveGoBtn" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-2xl font-bold text-base shadow-lg mt-4" onclick="submitApprove()">
+        Confirm & Submit
+      </button>
+      <button class="w-full bg-slate-100 text-slate-700 py-3 rounded-2xl font-bold text-base mt-3" onclick="liff.closeWindow()">
+        Close
+      </button>
+    </div>
+  </div>
+
+  <div class="sticky-bottom" id="submitBar">
     <button id="submitBtn" onclick="handleSubmit()" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-4 rounded-2xl font-bold text-lg shadow-lg">
       Submit
     </button>
@@ -108,19 +132,87 @@
 
 <div id="loader" class="fixed inset-0 bg-white/80 backdrop-blur-sm z-[100] flex flex-col items-center justify-center hidden">
   <div class="w-10 h-10 border-4 border-slate-200 border-t-blue-600 rounded-full animate-spin mb-3"></div>
-  <p class="font-bold text-slate-600">Processing...</p>
+  <p class="font-bold text-slate-600" id="loaderText">Processing...</p>
+</div>
+
+<!-- Modal -->
+<div id="modal" class="modal-backdrop">
+  <div class="modal">
+    <p class="text-base font-bold text-slate-900" id="modalTitle">Done</p>
+    <p class="text-sm text-slate-600 mt-2" id="modalMsg"></p>
+    <div class="flex gap-2 mt-4">
+      <button class="flex-1 bg-blue-600 text-white py-2 rounded-xl font-bold" onclick="closeModal(true)">OK</button>
+      <button class="flex-1 bg-slate-100 text-slate-700 py-2 rounded-xl font-bold" onclick="closeModal(false)">Stay</button>
+    </div>
+  </div>
 </div>
 
 <script>
+  // ================= CONFIG =================
   const LIFF_ID = "2008997153-OdZGJzVg";
-  // สมมติวันหยุดบริษัท (ตัวอย่าง)
-  let companyHolidays = ["2026-04-13", "2026-04-14", "2026-04-15"]; 
 
+  // ✅ PUT YOUR APPS SCRIPT WEB APP /exec URL HERE
+  const WEB_APP_URL = "PASTE_YOUR_WEB_APP_EXEC_URL_HERE";
+
+  // Holiday list can be improved later (JSONP endpoint exists in backend now)
+  let companyHolidays = ["2026-04-13", "2026-04-14", "2026-04-15"];
+
+  // profile cache
+  let profileCache = null;
+
+  // ================= Utils =================
+  function qs(name) { return new URLSearchParams(location.search).get(name); }
+
+  function baseReturnUrl() {
+    const u = new URL(location.href);
+    u.search = "";
+    u.hash = "";
+    return u.toString();
+  }
+
+  function showLoader(msg) {
+    document.getElementById('loaderText').innerText = msg || "Processing...";
+    document.getElementById('loader').classList.remove('hidden');
+  }
+  function hideLoader() {
+    document.getElementById('loader').classList.add('hidden');
+  }
+
+  function showModal(title, msg) {
+    document.getElementById('modalTitle').innerText = title || "Done";
+    document.getElementById('modalMsg').innerText = msg || "";
+    document.getElementById('modal').style.display = "flex";
+  }
+  function closeModal(closeLiff) {
+    document.getElementById('modal').style.display = "none";
+    if (closeLiff) {
+      try { liff.closeWindow(); } catch (e) {}
+    }
+  }
+
+  function uuidv4() {
+    // good enough for client requestId
+    return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, c => {
+      const r = Math.random()*16|0, v = c === "x" ? r : (r&0x3|0x8);
+      return v.toString(16);
+    });
+  }
+
+  // ✅ Local date (avoid UTC shift)
+  function todayYmdLocal() {
+    const d = new Date();
+    const yyyy = d.getFullYear();
+    const mm = String(d.getMonth()+1).padStart(2,'0');
+    const dd = String(d.getDate()).padStart(2,'0');
+    return `${yyyy}-${mm}-${dd}`;
+  }
+
+  // ================= UI Actions =================
   function selectType(btn, val) {
     document.querySelectorAll('.type-btn').forEach(b => b.classList.remove('selected'));
     btn.classList.add('selected');
     document.getElementById('leaveTypeValue').value = val;
-    
+
     const otherField = document.getElementById('otherField');
     if (val === 'Other') otherField.classList.remove('hidden');
     else { otherField.classList.add('hidden'); document.getElementById('otherSpecify').value = ''; }
@@ -136,9 +228,10 @@
   }
 
   function handleFileChange(input) {
-    if(input.files[0]) {
-        document.getElementById('fileTitle').innerText = input.files[0].name.substring(0, 15) + "...";
-        document.getElementById('fileTitle').classList.add('text-blue-600');
+    if (input.files[0]) {
+      const nm = input.files[0].name;
+      document.getElementById('fileTitle').innerText = nm.length > 18 ? (nm.substring(0, 18) + "...") : nm;
+      document.getElementById('fileTitle').classList.add('text-blue-600');
     }
     validateOnFly();
   }
@@ -146,21 +239,25 @@
   function validateOnFly() {
     const sInput = document.getElementById('startDate').value;
     const eInput = document.getElementById('endDate').value;
-    if(!sInput || !eInput) return true;
+    if (!sInput || !eInput) return true;
 
-    const s = new Date(sInput);
-    const e = new Date(eInput);
+    const s = new Date(sInput + "T00:00:00");
+    const e = new Date(eInput + "T00:00:00");
+
     const type = document.getElementById('leaveTypeValue').value;
     const file = document.getElementById('fileInput').files[0];
     const card = document.getElementById('fileCard');
     const dayBadge = document.getElementById('dayCount');
 
     let totalWorkingDays = 0;
-    let current = new Date(s);
+    let current = new Date(s.getTime());
 
-    // 
-    while (current <= e) {
-      const dateStr = current.toISOString().split('T')[0];
+    while (current.getTime() <= e.getTime()) {
+      const yyyy = current.getFullYear();
+      const mm = String(current.getMonth()+1).padStart(2,'0');
+      const dd = String(current.getDate()).padStart(2,'0');
+      const dateStr = `${yyyy}-${mm}-${dd}`;
+
       const dayOfWeek = current.getDay();
       const isWeekend = (dayOfWeek === 0 || dayOfWeek === 6);
       const isHoliday = companyHolidays.includes(dateStr);
@@ -172,50 +269,195 @@
     dayBadge.innerText = `${totalWorkingDays} Working Day(s)`;
     dayBadge.classList.remove('hidden');
 
-    // บังคับแนบไฟล์ถ้า "วันลาจริง" >= 3
     if (type === 'Sick' && totalWorkingDays >= 3 && !file) {
       card.classList.add('field-error');
       document.getElementById('fileTitle').innerText = "Medical Cert. Required! *";
       document.getElementById('fileTitle').classList.add('text-red-600');
       return false;
     }
+
     card.classList.remove('field-error');
     document.getElementById('fileTitle').classList.remove('text-red-600');
-    if(!file) document.getElementById('fileTitle').innerText = "Attachment (Optional)";
+    if (!file) document.getElementById('fileTitle').innerText = "Attachment (Optional)";
     return true;
+  }
+
+  // ================= Core: Submit via POST + Redirect =================
+  function postMultipartRedirect(fields, fileInputEl) {
+    if (!WEB_APP_URL || WEB_APP_URL.includes("PASTE_")) {
+      alert("Please set WEB_APP_URL in index.html");
+      return;
+    }
+
+    const form = document.createElement("form");
+    form.method = "POST";
+    form.action = WEB_APP_URL;
+    form.enctype = "multipart/form-data";
+    form.style.display = "none";
+
+    Object.keys(fields).forEach(k => {
+      const inp = document.createElement("input");
+      inp.type = "hidden";
+      inp.name = k;
+      inp.value = fields[k] == null ? "" : String(fields[k]);
+      form.appendChild(inp);
+    });
+
+    // attach file (if any)
+    if (fileInputEl && fileInputEl.files && fileInputEl.files[0]) {
+      const clone = fileInputEl.cloneNode(true);
+      // cloning does not keep file, so we must append original input by moving it temporarily
+      // safest: append the original input, then put it back after submit using a placeholder
+      const placeholder = document.createComment("file-placeholder");
+      fileInputEl.parentNode.insertBefore(placeholder, fileInputEl);
+      form.appendChild(fileInputEl);
+
+      document.body.appendChild(form);
+      form.submit();
+
+      // Note: page will navigate away, so restoring isn't necessary.
+      return;
+    }
+
+    document.body.appendChild(form);
+    form.submit();
   }
 
   async function handleSubmit() {
     const type = document.getElementById('leaveTypeValue').value;
     const reason = document.getElementById('reason').value.trim();
     const otherSpec = document.getElementById('otherSpecify').value.trim();
-    
-    if(!type) return alert("Please select Leave Type");
-    if(type === 'Other' && !otherSpec) return alert("Please specify the 'Other' leave type");
-    if(!reason) return alert("Please specify reason");
-    if(!validateOnFly()) return alert("Attachment required for Sick Leave >= 3 working days");
+    const startDate = document.getElementById('startDate').value;
+    const endDate = document.getElementById('endDate').value;
+    const dayPart = document.getElementById('durationValue').value || "Full Day";
 
-    document.getElementById('loader').classList.remove('hidden');
-    
-    setTimeout(() => {
-      alert("✅ Submitted Successfully!");
-      document.getElementById('loader').classList.add('hidden');
-      liff.closeWindow();
-    }, 2000);
+    if (!type) return alert("Please select Leave Type");
+    if (!startDate || !endDate) return alert("Please select date range");
+    if (type === 'Other' && !otherSpec) return alert("Please specify the 'Other' leave type");
+    if (!reason) return alert("Please specify reason");
+    if (!validateOnFly()) return alert("Attachment required for Sick Leave >= 3 working days");
+
+    showLoader("Submitting...");
+
+    const p = profileCache;
+    const requestId = uuidv4();
+
+    // ✅ FIELD MAPPING => MATCH BACKEND
+    const fields = {
+      action: "submit_leave",
+      returnUrl: baseReturnUrl(),
+
+      requestId,
+
+      userId: p?.userId || "",
+      name: p?.displayName || "",
+      pictureUrl: p?.pictureUrl || "",
+
+      leaveType: type,
+      otherSpecify: otherSpec,
+
+      startDate,
+      endDate,
+      dayPart,
+      reason
+    };
+
+    // this will navigate to WEB_APP_URL then redirect back
+    postMultipartRedirect(fields, document.getElementById('fileInput'));
   }
 
+  // ================= Approve flow (same page) =================
+  function enterApproveModeUI() {
+    document.getElementById('formArea').classList.add('hidden');
+    document.getElementById('submitBar').classList.add('hidden');
+    document.getElementById('approveArea').classList.remove('hidden');
+    const badge = document.getElementById('modeBadge');
+    badge.innerText = "MODE: APPROVE";
+    badge.classList.remove('hidden');
+  }
+
+  function submitApprove() {
+    const reqId = qs("requestId") || "";
+    const decision = (qs("decision") || "").toUpperCase(); // APPROVE / REJECT
+    if (!reqId || !decision) return alert("Missing requestId/decision");
+
+    const actor = profileCache?.userId || "";
+    if (!actor) return alert("Cannot identify approver (no LIFF profile)");
+
+    showLoader("Submitting decision...");
+
+    const fields = {
+      action: "approve_leave",
+      returnUrl: baseReturnUrl(),
+
+      requestId: reqId,
+      decision,
+      actorUserId: actor
+    };
+
+    postMultipartRedirect(fields, null);
+  }
+
+  // ================= Handle Redirect Result =================
+  function handleRedirectResult() {
+    const ok = qs("ok");
+    if (!ok) return;
+
+    const mode = qs("mode") || "submit";
+    const requestId = qs("requestId") || "";
+    const status = qs("status") || "";
+    const err = qs("error") || "";
+
+    // clean URL (remove query so refresh won't show again)
+    const u = new URL(location.href);
+    u.search = "";
+    history.replaceState({}, "", u.toString());
+
+    hideLoader();
+
+    if (ok === "1") {
+      if (mode === "approve") {
+        showModal("✅ Done", `Decision saved.\nRequestId: ${requestId}\nStatus: ${status || "-"}`);
+      } else {
+        showModal("✅ Submitted Successfully!", `Your request has been saved.\nRequestId: ${requestId}`);
+      }
+    } else {
+      showModal("❌ Failed", `Error: ${err || "unknown_error"}\nRequestId: ${requestId || "-"}`);
+    }
+  }
+
+  // ================= LIFF Init =================
   liff.init({ liffId: LIFF_ID }).then(async () => {
-    if(!liff.isLoggedIn()) liff.login();
+    if (!liff.isLoggedIn()) liff.login();
+
     const p = await liff.getProfile();
+    profileCache = p;
+
     document.getElementById('userGreet').innerText = `Hi, ${p.displayName}`;
-    if(p.pictureUrl) {
+    if (p.pictureUrl) {
       document.getElementById('profileImg').src = p.pictureUrl;
       document.getElementById('avatarBox').classList.remove('hidden');
     }
-    const today = new Date().toISOString().split('T')[0];
+
+    // init dates
+    const today = todayYmdLocal();
     document.getElementById('startDate').value = today;
     document.getElementById('endDate').value = today;
     validateOnFly();
+
+    // If this page opened from Flex approve/reject
+    const mode = qs("mode");
+    if (mode === "approve") {
+      enterApproveModeUI();
+      document.getElementById('approveReqId').innerText = qs("requestId") || "-";
+      document.getElementById('approveDecision').innerText = (qs("decision") || "").toUpperCase() || "-";
+    }
+
+    // Show result if redirected back
+    handleRedirectResult();
+
+  }).catch(err => {
+    alert("LIFF init error: " + (err && err.message ? err.message : String(err)));
   });
 </script>
 </body>

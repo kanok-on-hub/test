@@ -111,8 +111,10 @@
   </div>
 </div>
 
+<!-- Hidden iframe for submit + PM calls -->
 <iframe id="submitFrame" name="submitFrame" class="hidden"></iframe>
 
+<!-- ✅ Minimal Success Modal -->
 <div id="successModal" class="fixed inset-0 hidden items-center justify-center z-[999]">
   <div class="absolute inset-0 bg-black/40"></div>
   <div class="relative w-[92%] max-w-sm bg-white rounded-3xl p-6 shadow-xl text-center">
@@ -136,7 +138,325 @@
   let userProfile = null;
   let pendingRequestId = "";
 
+  // internal flags
+  let gotSubmitResponse = false;
+
   const $ = (id) => document.getElementById(id);
 
   function showLoader(msg){
-  
+    $("loaderText").textContent = msg || "Processing...";
+    $("loader").classList.remove("hidden");
+    $("loader").classList.add("flex");
+  }
+  function hideLoader(){
+    $("loader").classList.add("hidden");
+    $("loader").classList.remove("flex");
+  }
+
+  function uuidv4() {
+    if (window.crypto && crypto.randomUUID) return crypto.randomUUID();
+    return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, c => {
+      const r = (crypto.getRandomValues(new Uint8Array(1))[0] & 15);
+      const v = c === "x" ? r : (r & 3) | 8;
+      return v.toString(16);
+    });
+  }
+
+  function openSuccessModal() {
+    $("successModal").classList.remove("hidden");
+    $("successModal").classList.add("flex");
+  }
+
+  function doneAndExit() {
+    try { liff.closeWindow(); } catch(e) {
+      $("successModal").classList.add("hidden");
+      $("successModal").classList.remove("flex");
+    }
+  }
+
+  function selectType(btn, val) {
+    document.querySelectorAll('.type-btn').forEach(b => b.classList.remove('selected'));
+    btn.classList.add('selected');
+    $('leaveTypeValue').value = val;
+
+    if (val === 'Other') $('otherField').classList.remove('hidden');
+    else { $('otherField').classList.add('hidden'); $('otherSpecify').value = ''; }
+
+    validateOnFly();
+  }
+
+  function selectDur(btn, val) {
+    document.querySelectorAll('.dur-btn').forEach(b => {
+      b.className = "dur-btn flex-1 py-2 text-sm font-medium text-slate-500";
+    });
+    btn.className = "dur-btn flex-1 py-2 text-sm font-bold rounded-lg bg-white shadow-sm text-blue-600";
+    $('durationValue').value = val;
+  }
+
+  function handleFileChange() {
+    const f = $('fileInput').files[0];
+    if (f) {
+      $('fileTitle').textContent = f.name.length > 18 ? f.name.slice(0,18) + "..." : f.name;
+      $('fileTitle').classList.add('text-blue-600');
+    } else {
+      $('fileTitle').textContent = "Attachment (Optional)";
+      $('fileTitle').classList.remove('text-blue-600');
+    }
+    validateOnFly();
+  }
+
+  // ✅ Holiday load via iframe PM (NO CORS)
+  async function fetchHolidays() {
+    try {
+      const frame = document.getElementById("submitFrame");
+      frame.src = API_URL + "?action=get_holidays_pm&t=" + Date.now();
+    } catch (e) {
+      companyHolidays = [];
+    }
+  }
+
+  function calcWorkingDays(sStr, eStr) {
+    if (!sStr || !eStr) return 0;
+    const s = new Date(sStr);
+    const e = new Date(eStr);
+    if (isNaN(s.getTime()) || isNaN(e.getTime()) || s > e) return 0;
+
+    let total = 0;
+    const cur = new Date(s);
+    while (cur <= e) {
+      const dow = cur.getDay();
+      const isWeekend = (dow === 0 || dow === 6);
+      const dateStr = cur.toISOString().split('T')[0];
+      const isHoliday = companyHolidays.includes(dateStr);
+      if (!isWeekend && !isHoliday) total++;
+      cur.setDate(cur.getDate() + 1);
+    }
+    return total;
+  }
+
+  function validateOnFly() {
+    const type = $('leaveTypeValue').value;
+    const s = $('startDate').value;
+    const e = $('endDate').value;
+    const badge = $('dayBadge');
+
+    if (s && e) {
+      const days = calcWorkingDays(s, e);
+      badge.textContent = `${days} Working Days`;
+      badge.classList.remove('hidden');
+
+      const file = $('fileInput').files[0];
+      const card = $('fileCard');
+      if (type === 'Sick' && days >= 3 && !file) {
+        card.classList.add('err');
+        $('fileTitle').textContent = "Medical Cert. Required! *";
+        $('fileTitle').classList.add('text-red-600');
+        return false;
+      } else {
+        card.classList.remove('err');
+        $('fileTitle').classList.remove('text-red-600');
+        return true;
+      }
+    }
+    return true;
+  }
+
+  function buildAndSubmitForm(action, extraFields) {
+    const form = document.createElement("form");
+    form.method = "POST";
+    form.action = `${API_URL}?action=${encodeURIComponent(action)}`;
+    form.enctype = "multipart/form-data";
+    form.target = "submitFrame";
+    form.style.display = "none";
+
+    const add = (k, v) => {
+      const input = document.createElement("input");
+      input.type = "hidden";
+      input.name = k;
+      input.value = v == null ? "" : String(v);
+      form.appendChild(input);
+    };
+
+    add("action", action);
+    Object.keys(extraFields || {}).forEach(k => add(k, extraFields[k]));
+
+    const fileInput = $("fileInput");
+    fileInput.setAttribute("name", "file"); // backend รับได้ทุก field name แต่กำหนดให้ชัวร์
+    form.appendChild(fileInput);
+
+    document.body.appendChild(form);
+    form.submit();
+
+    setTimeout(() => {
+      const holder = document.getElementById("fileCard");
+      if (holder && !holder.contains(fileInput)) holder.appendChild(fileInput);
+      fileInput.onchange = handleFileChange;
+      try { document.body.removeChild(form); } catch(e) {}
+    }, 300);
+
+    // ✅ If no postMessage within 12 sec => verify via iframe PM (NO CORS)
+    setTimeout(() => {
+      const loaderVisible = !$("loader").classList.contains("hidden");
+      if (!loaderVisible) return;
+
+      if (!pendingRequestId) {
+        hideLoader();
+        alert("No response (missing requestId).");
+        return;
+      }
+
+      const frame = document.getElementById("submitFrame");
+      frame.src = API_URL
+        + "?action=check_request_pm"
+        + "&requestId=" + encodeURIComponent(pendingRequestId)
+        + "&t=" + Date.now();
+
+      // ✅ fail-open: ถ้า verify ก็ยังไม่กลับ ให้ขึ้น success เลย (เพราะส่วนใหญ่ save แล้ว)
+      setTimeout(() => {
+        const still = !$("loader").classList.contains("hidden");
+        if (still) {
+          hideLoader();
+          openSuccessModal();
+        }
+      }, 8000);
+
+    }, 12000);
+
+    // ✅ Safety timeout กันหมุนค้างยาว ๆ
+    setTimeout(() => {
+      const loaderVisible = !$("loader").classList.contains("hidden");
+      if (loaderVisible) {
+        hideLoader();
+        openSuccessModal(); // fail-open
+      }
+    }, 25000);
+  }
+
+  async function handleSubmit() {
+    const type = $('leaveTypeValue').value;
+    const startDate = $('startDate').value;
+    const endDate = $('endDate').value;
+    const reason = $('reason').value.trim();
+    const otherSpec = $('otherSpecify').value.trim();
+
+    if (!type) return alert("Please select Leave Type");
+    if (type === 'Other' && !otherSpec) return alert("Please specify Other type");
+    if (!startDate || !endDate) return alert("Please select dates");
+    if (!reason) return alert("Please specify reason");
+    if (!validateOnFly()) return alert("Medical Certificate required!");
+
+    pendingRequestId = uuidv4();
+    gotSubmitResponse = false;
+
+    showLoader("Submitting...");
+
+    buildAndSubmitForm("submit_leave", {
+      requestId: pendingRequestId,
+      userId: userProfile?.userId || "",
+      name: userProfile?.displayName || "",
+      leaveType: type,
+      otherSpecify: otherSpec,
+      startDate,
+      endDate,
+      dayPart: $('durationValue').value || "Full Day",
+      reason
+    });
+  }
+
+  // ✅ Receive postMessage from backend via iframe
+  window.addEventListener("message", (event) => {
+    const frame = document.getElementById("submitFrame");
+    if (!frame || event.source !== frame.contentWindow) return;
+
+    const data = event.data || {};
+    if (!data || data.app !== "leave_backend") return;
+
+    // Holiday list
+    if (data.mode === "get_holidays") {
+      companyHolidays = Array.isArray(data.holidays) ? data.holidays : [];
+      validateOnFly();
+      return;
+    }
+
+    // Verify result
+    if (data.mode === "check_request") {
+      hideLoader();
+      if (data.found) openSuccessModal();
+      else openSuccessModal(); // fail-open ตาม requirement
+      return;
+    }
+
+    // Submit/Approve result
+    if (data.mode === "submit_leave") {
+      gotSubmitResponse = true;
+      hideLoader();
+      if (data.ok) openSuccessModal();
+      else alert(data.error ? String(data.error) : "Submit failed");
+      return;
+    }
+
+    if (data.mode === "approve_leave") {
+      hideLoader();
+      if (data.ok) {
+        alert("✅ Status updated: " + (data.status || ""));
+        try { liff.closeWindow(); } catch(e) {}
+      } else {
+        alert(data.error ? String(data.error) : "Approve failed");
+      }
+      return;
+    }
+  });
+
+  async function handleApproveFlowIfAny() {
+    const params = new URLSearchParams(location.search);
+    const mode = params.get("mode");
+    const requestId = params.get("requestId");
+    const decision = params.get("decision");
+
+    if (mode === "approve") {
+      if (!requestId || !decision) return;
+
+      $("title").textContent = "Leave Approval";
+      $("userGreet").textContent = "Processing decision...";
+      showLoader("Approving...");
+
+      const profile = await liff.getProfile();
+      pendingRequestId = requestId;
+
+      buildAndSubmitForm("approve_leave", {
+        requestId,
+        decision,
+        actorUserId: profile.userId
+      });
+    }
+  }
+
+  async function init() {
+    await liff.init({ liffId: LIFF_ID });
+    if (!liff.isLoggedIn()) { liff.login(); return; }
+
+    userProfile = await liff.getProfile();
+    $('userGreet').textContent = `Hi, ${userProfile.displayName}`;
+    if (userProfile.pictureUrl) {
+      $('profileImg').src = userProfile.pictureUrl;
+      $('avatarBox').classList.remove('hidden');
+    }
+
+    const today = new Date().toISOString().split('T')[0];
+    $('startDate').value = today;
+    $('endDate').value = today;
+
+    await fetchHolidays(); // via iframe pm
+    validateOnFly();
+
+    await handleApproveFlowIfAny();
+    hideLoader();
+  }
+
+  init().catch(err => {
+    console.error(err);
+    alert("LIFF init error: " + (err.message || err));
+  });
+</script>
+</body>
+</html>

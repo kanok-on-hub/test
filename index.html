@@ -111,17 +111,13 @@
   </div>
 </div>
 
-<!-- Hidden iframe for submit -->
 <iframe id="submitFrame" name="submitFrame" class="hidden"></iframe>
 
-<!-- ✅ Minimal Success Modal -->
 <div id="successModal" class="fixed inset-0 hidden items-center justify-center z-[999]">
   <div class="absolute inset-0 bg-black/40"></div>
-
   <div class="relative w-[92%] max-w-sm bg-white rounded-3xl p-6 shadow-xl text-center">
     <div class="text-2xl font-extrabold text-slate-900">Saved Successfully ✅</div>
     <div class="mt-2 text-sm text-slate-600">Your request has been submitted.</div>
-
     <button type="button"
             class="mt-6 w-full bg-blue-600 text-white py-3 rounded-2xl font-bold text-lg"
             onclick="doneAndExit()">
@@ -133,13 +129,11 @@
 <script>
   // ======= SET THESE 2 VALUES ONLY =======
   const LIFF_ID = "2008997153-OdZGJzVg";
-  const API_URL = "https://script.google.com/macros/s/AKfycbw3PCZGZG_puGPUY_FdDYAR765UUs8Wr2ERJDzXmOz-nOLt_V25JkUSdrWXNFNk3-h4/exec";
+  const API_URL  = "https://script.google.com/macros/s/AKfycbw3PCZGZG_puGPUY_FdDYAR765UUs8Wr2ERJDzXmOz-nOLt_V25JkUSdrWXNFNk3-h4/exec"; // .../exec
   // ======================================
 
   let companyHolidays = [];
   let userProfile = null;
-
-  // requestId used for verification when no postMessage received
   let pendingRequestId = "";
 
   const $ = (id) => document.getElementById(id);
@@ -170,7 +164,6 @@
 
   function doneAndExit() {
     try { liff.closeWindow(); } catch(e) {
-      // fallback (if not in LIFF)
       $("successModal").classList.add("hidden");
       $("successModal").classList.remove("flex");
     }
@@ -283,12 +276,15 @@
     add("action", action);
     Object.keys(extraFields || {}).forEach(k => add(k, extraFields[k]));
 
+    // file input: backend รับได้ทุก field name แต่เราตั้งให้เป็น "file" ง่ายสุด
     const fileInput = $("fileInput");
+    fileInput.setAttribute("name", "file");
     form.appendChild(fileInput);
 
     document.body.appendChild(form);
     form.submit();
 
+    // restore
     setTimeout(() => {
       const holder = document.getElementById("fileCard");
       if (holder && !holder.contains(fileInput)) holder.appendChild(fileInput);
@@ -296,9 +292,9 @@
       try { document.body.removeChild(form); } catch(e) {}
     }, 300);
 
-    // If no postMessage within 12 sec => verify saved by requestId
-    setTimeout(async () => {
-      const loaderVisible = !document.getElementById("loader").classList.contains("hidden");
+    // ✅ If no postMessage within 12 sec => verify via iframe (NO CORS)
+    setTimeout(() => {
+      const loaderVisible = !$("loader").classList.contains("hidden");
       if (!loaderVisible) return;
 
       if (!pendingRequestId) {
@@ -307,22 +303,13 @@
         return;
       }
 
-      try {
-        const res = await fetch(API_URL + "?action=check_request&requestId=" + encodeURIComponent(pendingRequestId) + "&t=" + Date.now());
-        const data = await res.json();
+      // ยิง iframe ไป verify ให้ backend postMessage กลับ
+      const frame = document.getElementById("submitFrame");
+      frame.src = API_URL
+        + "?action=check_request_pm"
+        + "&requestId=" + encodeURIComponent(pendingRequestId)
+        + "&t=" + Date.now();
 
-        if (data && data.ok && data.found) {
-          hideLoader();
-          openSuccessModal();
-          return;
-        }
-
-        hideLoader();
-        alert("No response. Cannot confirm saved. Please try again.");
-      } catch (e) {
-        hideLoader();
-        alert("No response. Verification failed. Please try again.");
-      }
     }, 12000);
   }
 
@@ -346,7 +333,6 @@
       requestId: pendingRequestId,
       userId: userProfile?.userId || "",
       name: userProfile?.displayName || "",
-      pictureUrl: userProfile?.pictureUrl || "",
       leaveType: type,
       otherSpecify: otherSpec,
       startDate,
@@ -356,7 +342,7 @@
     });
   }
 
-  // Receive result from backend via postMessage (hidden iframe)
+  // ✅ Receive result from backend via postMessage (iframe)
   window.addEventListener("message", (event) => {
     const frame = document.getElementById("submitFrame");
     if (!frame || event.source !== frame.contentWindow) return;
@@ -364,39 +350,19 @@
     const data = event.data || {};
     if (!data || data.app !== "leave_backend") return;
 
+    // verify response
+    if (data.mode === "check_request") {
+      hideLoader();
+      if (data.found) openSuccessModal();
+      else alert("No response. Cannot confirm saved. Please try again.");
+      return;
+    }
+
+    // submit/approve response
     hideLoader();
-
-    if (data.ok) {
-      // ✅ Success => show minimal modal and exit on Done
-      openSuccessModal();
-    } else {
-      alert(data.error ? String(data.error) : "Submit failed");
-    }
+    if (data.ok) openSuccessModal();
+    else alert(data.error ? String(data.error) : "Submit failed");
   });
-
-  async function handleApproveFlowIfAny() {
-    const params = new URLSearchParams(location.search);
-    const mode = params.get("mode");
-    const requestId = params.get("requestId");
-    const decision = params.get("decision");
-
-    if (mode === "approve") {
-      if (!requestId || !decision) return;
-
-      $("title").textContent = "Leave Approval";
-      $("userGreet").textContent = "Processing decision...";
-      showLoader("Approving...");
-
-      const profile = await liff.getProfile();
-      pendingRequestId = requestId;
-
-      buildAndSubmitForm("approve_leave", {
-        requestId,
-        decision,
-        actorUserId: profile.userId
-      });
-    }
-  }
 
   async function init() {
     await liff.init({ liffId: LIFF_ID });
@@ -409,16 +375,12 @@
       $('avatarBox').classList.remove('hidden');
     }
 
-    $("fileInput").setAttribute("name", "file");
-
     const today = new Date().toISOString().split('T')[0];
     $('startDate').value = today;
     $('endDate').value = today;
 
     await fetchHolidays();
     validateOnFly();
-
-    await handleApproveFlowIfAny();
     hideLoader();
   }
 

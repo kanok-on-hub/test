@@ -3,461 +3,428 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0, viewport-fit=cover" />
-  <title>Smart Leave Request</title>
+  <title>Leave Request</title>
   <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
   <script src="https://cdn.tailwindcss.com"></script>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>
-    body { font-family: 'Inter', sans-serif; background-color: #f8fafc; color: #1e293b; -webkit-tap-highlight-color: transparent; }
-    .card-section { background: white; border-radius: 1rem; border: 1px solid #e2e8f0; padding: 1.25rem; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
-    .type-btn { width: 100%; text-align: left; padding: 1rem; border: 1px solid #e2e8f0; border-radius: 1rem; background: white; transition: all 0.2s; cursor: pointer; }
-    .type-btn.selected { border-color: #2563eb; background-color: #eff6ff; border-width: 2px; }
-    .input-field { background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 0.75rem; padding: 0.75rem; width: 100%; outline: none; transition: all 0.2s; font-size: 1rem; }
-    .input-field:focus { border-color: #2563eb; background-color: white; box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1); }
-    .field-error { border: 2px solid #ef4444 !important; background-color: #fef2f2 !important; }
-    .sticky-bottom { position: fixed; bottom: 0; left: 0; right: 0; background: white; border-top: 1px solid #e2e8f0; padding: 1rem; padding-bottom: calc(1rem + env(safe-area-inset-bottom)); z-index: 50; }
-    .animate-in { animation: fadeIn 0.3s ease-out; }
-    @keyframes fadeIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
-
-    /* Modal */
-    .modal-backdrop { position: fixed; inset: 0; background: rgba(15,23,42,0.35); display: none; align-items: center; justify-content: center; z-index: 200; padding: 16px; }
-    .modal { background: #fff; border-radius: 18px; padding: 18px; width: 100%; max-width: 420px; border: 1px solid #e2e8f0; box-shadow: 0 10px 30px rgba(0,0,0,0.15); }
+    body { font-family: 'Inter', sans-serif; background:#f8fafc; color:#0f172a; -webkit-tap-highlight-color: transparent; }
+    .card { background:#fff; border-radius: 1rem; border:1px solid #e2e8f0; padding: 1rem; }
+    .type-btn { width:100%; text-align:left; padding: 1rem; border:1px solid #e2e8f0; border-radius: 1rem; background:#fff; transition: .2s; }
+    .type-btn.selected { border-color:#2563eb; background:#eff6ff; border-width:2px; }
+    .input { background:#f8fafc; border:1px solid #e2e8f0; border-radius:.75rem; padding:.75rem; width:100%; outline:none; }
+    .err { border:2px solid #ef4444 !important; background:#fef2f2 !important; }
   </style>
 </head>
-<body class="pb-32">
 
-<div id="app" class="max-w-md mx-auto">
-  <div class="bg-white px-6 pt-12 pb-6 rounded-b-[2.5rem] shadow-sm border-b border-gray-100 mb-6">
+<body class="pb-28">
+<div class="max-w-md mx-auto">
+
+  <div class="bg-white px-6 pt-10 pb-6 rounded-b-[2.5rem] shadow-sm border-b border-gray-100 mb-6">
     <div class="flex items-center gap-4">
-      <div id="avatarBox" class="w-14 h-14 rounded-full overflow-hidden border-2 border-blue-50 hidden shadow-inner">
+      <div id="avatarBox" class="w-14 h-14 rounded-full overflow-hidden border-2 border-blue-50 hidden">
         <img id="profileImg" src="" class="w-full h-full object-cover">
       </div>
       <div>
-        <h1 class="text-xl font-bold text-slate-900 leading-tight">Leave Request 📝</h1>
-        <p id="userGreet" class="text-slate-500 text-sm font-medium">Loading profile...</p>
-        <p id="modeBadge" class="text-[10px] font-bold text-blue-600 mt-1 hidden"></p>
+        <h1 id="title" class="text-xl font-bold">Leave Request 📝</h1>
+        <p id="userGreet" class="text-slate-500 text-sm font-medium">Loading...</p>
       </div>
     </div>
   </div>
 
-  <div class="px-5 space-y-6" id="formArea">
+  <div class="px-5 space-y-6" id="formUI">
+
     <div class="space-y-3">
       <label class="text-sm font-bold text-slate-700 ml-1">Leave Type <span class="text-red-500">*</span></label>
       <div class="grid grid-cols-2 gap-3">
-        <button type="button" onclick="selectType(this, 'Sick')" class="type-btn">🤒 <span class="font-semibold text-slate-700">Sick</span></button>
-        <button type="button" onclick="selectType(this, 'Annual')" class="type-btn">🏖️ <span class="font-semibold text-slate-700">Annual</span></button>
-        <button type="button" onclick="selectType(this, 'Personal')" class="type-btn">🚗 <span class="font-semibold text-slate-700">Personal</span></button>
-        <button type="button" onclick="selectType(this, 'Other')" class="type-btn">📝 <span class="font-semibold text-slate-700">Other</span></button>
+        <button type="button" onclick="selectType(this,'Sick')" class="type-btn">🤒 <b>Sick</b></button>
+        <button type="button" onclick="selectType(this,'Annual')" class="type-btn">🏖️ <b>Annual</b></button>
+        <button type="button" onclick="selectType(this,'Personal')" class="type-btn">🚗 <b>Personal</b></button>
+        <button type="button" onclick="selectType(this,'Other')" class="type-btn">📝 <b>Other</b></button>
       </div>
       <input type="hidden" id="leaveTypeValue">
     </div>
 
-    <div id="otherField" class="hidden animate-in space-y-2">
-      <label class="text-sm font-bold text-blue-600 ml-1 italic font-medium">Please specify Other type *</label>
-      <input type="text" id="otherSpecify" class="input-field border-blue-100" placeholder="e.g. Ordination">
+    <div id="otherField" class="hidden space-y-2">
+      <label class="text-sm font-bold text-blue-600 ml-1 italic">Please specify Other type *</label>
+      <input type="text" id="otherSpecify" class="input" placeholder="e.g. Ordination">
     </div>
 
-    <div class="card-section space-y-4">
-      <div class="flex justify-between items-center">
+    <div class="card space-y-3">
+      <div class="flex items-center justify-between">
         <label class="text-sm font-bold text-slate-700">Date <span class="text-red-500">*</span></label>
-        <span id="dayCount" class="text-[10px] font-bold bg-blue-100 text-blue-600 px-2 py-1 rounded-full hidden">0 Days</span>
+        <span id="dayBadge" class="text-[10px] font-bold bg-blue-100 text-blue-600 px-2 py-1 rounded-full hidden"></span>
       </div>
+
       <div class="grid grid-cols-2 gap-4">
         <div>
-          <span class="text-[10px] uppercase font-bold text-slate-400 block mb-1">Start Date</span>
-          <input type="date" id="startDate" onchange="validateOnFly()" class="input-field text-center">
+          <div class="text-[10px] uppercase font-bold text-slate-400 mb-1">Start</div>
+          <input type="date" id="startDate" class="input text-center" onchange="validateOnFly()">
         </div>
         <div>
-          <span class="text-[10px] uppercase font-bold text-slate-400 block mb-1">End Date</span>
-          <input type="date" id="endDate" onchange="validateOnFly()" class="input-field text-center">
+          <div class="text-[10px] uppercase font-bold text-slate-400 mb-1">End</div>
+          <input type="date" id="endDate" class="input text-center" onchange="validateOnFly()">
         </div>
       </div>
-      <p class="text-[10px] text-slate-400 italic font-medium leading-relaxed">
-        * Weekends and company holidays will be automatically excluded from calculation.
-      </p>
+
+      <div class="text-[10px] text-slate-400 italic font-medium">* Weekends & Company Holidays excluded (holiday list optional).</div>
     </div>
 
-    <div class="card-section space-y-3">
+    <div class="card space-y-2">
       <label class="text-sm font-bold text-slate-700 block">Duration <span class="text-red-500">*</span></label>
       <div class="flex bg-slate-100 p-1 rounded-xl">
-        <button id="durFull" type="button" onclick="selectDur(this, 'Full Day')" class="flex-1 py-2 text-sm font-bold rounded-lg bg-white shadow-sm text-blue-600 transition-all">Full Day</button>
-        <button type="button" onclick="selectDur(this, 'Morning')" class="flex-1 py-2 text-sm font-medium text-slate-500">Morning</button>
-        <button type="button" onclick="selectDur(this, 'Afternoon')" class="flex-1 py-2 text-sm font-medium text-slate-500">Afternoon</button>
+        <button type="button" onclick="selectDur(this,'Full Day')" class="dur-btn flex-1 py-2 text-sm font-bold rounded-lg bg-white shadow-sm text-blue-600">Full Day</button>
+        <button type="button" onclick="selectDur(this,'Morning')" class="dur-btn flex-1 py-2 text-sm font-medium text-slate-500">Morning</button>
+        <button type="button" onclick="selectDur(this,'Afternoon')" class="dur-btn flex-1 py-2 text-sm font-medium text-slate-500">Afternoon</button>
       </div>
       <input type="hidden" id="durationValue" value="Full Day">
     </div>
 
     <div class="space-y-2">
       <label class="text-sm font-bold text-slate-700 ml-1">Reason <span class="text-red-500">*</span></label>
-      <textarea id="reason" rows="3" oninput="validateOnFly()" class="input-field" placeholder="Please specify reason..."></textarea>
+      <textarea id="reason" rows="3" class="input" placeholder="Please specify reason..." oninput="validateOnFly()"></textarea>
     </div>
 
-    <div id="fileCard" class="card-section border-dashed border-2 flex items-center justify-between cursor-pointer" onclick="document.getElementById('fileInput').click()">
+    <div id="fileCard" class="card border-dashed border-2 flex items-center justify-between cursor-pointer"
+         onclick="document.getElementById('fileInput').click()">
       <div class="flex items-center gap-3">
         <div class="w-10 h-10 bg-blue-50 rounded-full flex items-center justify-center text-blue-500">📎</div>
         <div>
           <p id="fileTitle" class="text-sm font-bold text-slate-700">Attachment (Optional)</p>
-          <p id="fileSubtitle" class="text-[10px] text-slate-400 italic font-medium">Required for Sick Leave ≥ 3 working days</p>
+          <p class="text-[10px] text-slate-400 italic">Required if Sick Leave ≥ 3 working days</p>
         </div>
       </div>
-      <input type="file" id="fileInput" class="hidden" onchange="handleFileChange(this)">
+      <input type="file" id="fileInput" class="hidden" onchange="handleFileChange()" accept="image/*,application/pdf">
     </div>
+
   </div>
 
-  <!-- Approve UI (same page) -->
-  <div class="px-5 space-y-4 hidden" id="approveArea">
-    <div class="card-section">
-      <p class="text-sm font-bold text-slate-800">Approve / Reject</p>
-      <p class="text-xs text-slate-500 mt-1">
-        Request ID: <span id="approveReqId" class="font-mono text-slate-700"></span>
-      </p>
-      <p class="text-xs text-slate-500 mt-1">
-        Decision: <span id="approveDecision" class="font-bold"></span>
-      </p>
-      <button id="approveGoBtn" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-2xl font-bold text-base shadow-lg mt-4" onclick="submitApprove()">
-        Confirm & Submit
-      </button>
-      <button class="w-full bg-slate-100 text-slate-700 py-3 rounded-2xl font-bold text-base mt-3" onclick="liff.closeWindow()">
-        Close
-      </button>
-    </div>
+  <div class="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 p-4 pb-[calc(1rem+env(safe-area-inset-bottom))]">
+    <button id="submitBtn" onclick="handleSubmit()" class="w-full bg-blue-600 text-white py-4 rounded-2xl font-bold text-lg">Submit</button>
   </div>
+</div>
 
-  <div class="sticky-bottom" id="submitBar">
-    <button id="submitBtn" onclick="handleSubmit()" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-4 rounded-2xl font-bold text-lg shadow-lg">
-      Submit
+<div id="loader" class="fixed inset-0 bg-white/80 backdrop-blur-sm hidden items-center justify-center z-50">
+  <div class="text-center">
+    <div class="w-10 h-10 border-4 border-slate-200 border-t-blue-600 rounded-full animate-spin mx-auto mb-3"></div>
+    <div class="font-bold text-slate-600" id="loaderText">Processing...</div>
+  </div>
+</div>
+
+<!-- Hidden iframe for submit -->
+<iframe id="submitFrame" name="submitFrame" class="hidden"></iframe>
+
+<!-- ✅ Minimal Success Modal -->
+<div id="successModal" class="fixed inset-0 hidden items-center justify-center z-[999]">
+  <div class="absolute inset-0 bg-black/40"></div>
+
+  <div class="relative w-[92%] max-w-sm bg-white rounded-3xl p-6 shadow-xl text-center">
+    <div class="text-2xl font-extrabold text-slate-900">Saved Successfully ✅</div>
+    <div class="mt-2 text-sm text-slate-600">Your request has been submitted.</div>
+
+    <button type="button"
+            class="mt-6 w-full bg-blue-600 text-white py-3 rounded-2xl font-bold text-lg"
+            onclick="doneAndExit()">
+      Done
     </button>
   </div>
 </div>
 
-<div id="loader" class="fixed inset-0 bg-white/80 backdrop-blur-sm z-[100] flex flex-col items-center justify-center hidden">
-  <div class="w-10 h-10 border-4 border-slate-200 border-t-blue-600 rounded-full animate-spin mb-3"></div>
-  <p class="font-bold text-slate-600" id="loaderText">Processing...</p>
-</div>
-
-<!-- Modal -->
-<div id="modal" class="modal-backdrop">
-  <div class="modal">
-    <p class="text-base font-bold text-slate-900" id="modalTitle">Done</p>
-    <p class="text-sm text-slate-600 mt-2" id="modalMsg"></p>
-    <div class="flex gap-2 mt-4">
-      <button class="flex-1 bg-blue-600 text-white py-2 rounded-xl font-bold" onclick="closeModal(true)">OK</button>
-      <button class="flex-1 bg-slate-100 text-slate-700 py-2 rounded-xl font-bold" onclick="closeModal(false)">Stay</button>
-    </div>
-  </div>
-</div>
-
 <script>
-  // ================= CONFIG =================
+  // ======= SET THESE 2 VALUES ONLY =======
   const LIFF_ID = "2008997153-OdZGJzVg";
+  const API_URL = "https://script.google.com/macros/s/AKfycby9WkktTkhrTLrtCYdNVDuedfewbuWgAkR5v3oV2u2a9htVhzyZzf2Ihdu3yw8sFk32qQ/exec";
+  // ======================================
 
-  // ✅ PUT YOUR APPS SCRIPT WEB APP /exec URL HERE
-  const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbw3PCZGZG_puGPUY_FdDYAR765UUs8Wr2ERJDzXmOz-nOLt_V25JkUSdrWXNFNk3-h4/exec";
+  let companyHolidays = [];
+  let userProfile = null;
 
-  // Holiday list can be improved later (JSONP endpoint exists in backend now)
-  let companyHolidays = ["2026-04-13", "2026-04-14", "2026-04-15"];
+  // requestId used for verification when no postMessage received
+  let pendingRequestId = "";
 
-  // profile cache
-  let profileCache = null;
+  const $ = (id) => document.getElementById(id);
 
-  // ================= Utils =================
-  function qs(name) { return new URLSearchParams(location.search).get(name); }
-
-  function baseReturnUrl() {
-    const u = new URL(location.href);
-    u.search = "";
-    u.hash = "";
-    return u.toString();
+  function showLoader(msg){
+    $("loaderText").textContent = msg || "Processing...";
+    $("loader").classList.remove("hidden");
+    $("loader").classList.add("flex");
   }
-
-  function showLoader(msg) {
-    document.getElementById('loaderText').innerText = msg || "Processing...";
-    document.getElementById('loader').classList.remove('hidden');
-  }
-  function hideLoader() {
-    document.getElementById('loader').classList.add('hidden');
-  }
-
-  function showModal(title, msg) {
-    document.getElementById('modalTitle').innerText = title || "Done";
-    document.getElementById('modalMsg').innerText = msg || "";
-    document.getElementById('modal').style.display = "flex";
-  }
-  function closeModal(closeLiff) {
-    document.getElementById('modal').style.display = "none";
-    if (closeLiff) {
-      try { liff.closeWindow(); } catch (e) {}
-    }
+  function hideLoader(){
+    $("loader").classList.add("hidden");
+    $("loader").classList.remove("flex");
   }
 
   function uuidv4() {
-    // good enough for client requestId
+    if (window.crypto && crypto.randomUUID) return crypto.randomUUID();
     return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, c => {
-      const r = Math.random()*16|0, v = c === "x" ? r : (r&0x3|0x8);
+      const r = (crypto.getRandomValues(new Uint8Array(1))[0] & 15);
+      const v = c === "x" ? r : (r & 3) | 8;
       return v.toString(16);
     });
   }
 
-  // ✅ Local date (avoid UTC shift)
-  function todayYmdLocal() {
-    const d = new Date();
-    const yyyy = d.getFullYear();
-    const mm = String(d.getMonth()+1).padStart(2,'0');
-    const dd = String(d.getDate()).padStart(2,'0');
-    return `${yyyy}-${mm}-${dd}`;
+  function openSuccessModal() {
+    $("successModal").classList.remove("hidden");
+    $("successModal").classList.add("flex");
   }
 
-  // ================= UI Actions =================
+  function doneAndExit() {
+    try { liff.closeWindow(); } catch(e) {
+      // fallback (if not in LIFF)
+      $("successModal").classList.add("hidden");
+      $("successModal").classList.remove("flex");
+    }
+  }
+
   function selectType(btn, val) {
     document.querySelectorAll('.type-btn').forEach(b => b.classList.remove('selected'));
     btn.classList.add('selected');
-    document.getElementById('leaveTypeValue').value = val;
+    $('leaveTypeValue').value = val;
 
-    const otherField = document.getElementById('otherField');
-    if (val === 'Other') otherField.classList.remove('hidden');
-    else { otherField.classList.add('hidden'); document.getElementById('otherSpecify').value = ''; }
+    if (val === 'Other') $('otherField').classList.remove('hidden');
+    else { $('otherField').classList.add('hidden'); $('otherSpecify').value = ''; }
+
     validateOnFly();
   }
 
   function selectDur(btn, val) {
-    btn.parentElement.querySelectorAll('button').forEach(b => {
-      b.className = "flex-1 py-2 text-sm font-medium text-slate-500";
+    document.querySelectorAll('.dur-btn').forEach(b => {
+      b.className = "dur-btn flex-1 py-2 text-sm font-medium text-slate-500";
     });
-    btn.className = "flex-1 py-2 text-sm font-bold rounded-lg bg-white shadow-sm text-blue-600 transition-all";
-    document.getElementById('durationValue').value = val;
+    btn.className = "dur-btn flex-1 py-2 text-sm font-bold rounded-lg bg-white shadow-sm text-blue-600";
+    $('durationValue').value = val;
   }
 
-  function handleFileChange(input) {
-    if (input.files[0]) {
-      const nm = input.files[0].name;
-      document.getElementById('fileTitle').innerText = nm.length > 18 ? (nm.substring(0, 18) + "...") : nm;
-      document.getElementById('fileTitle').classList.add('text-blue-600');
+  function handleFileChange() {
+    const f = $('fileInput').files[0];
+    if (f) {
+      $('fileTitle').textContent = f.name.length > 18 ? f.name.slice(0,18) + "..." : f.name;
+      $('fileTitle').classList.add('text-blue-600');
+    } else {
+      $('fileTitle').textContent = "Attachment (Optional)";
+      $('fileTitle').classList.remove('text-blue-600');
     }
     validateOnFly();
+  }
+
+  async function fetchHolidays() {
+    try {
+      const res = await fetch(API_URL + "?action=get_holidays&t=" + Date.now());
+      const data = await res.json();
+      companyHolidays = Array.isArray(data) ? data : [];
+    } catch (e) {
+      companyHolidays = [];
+      console.warn("Holiday fetch blocked, continue without holiday list");
+    }
+  }
+
+  function calcWorkingDays(sStr, eStr) {
+    if (!sStr || !eStr) return 0;
+    const s = new Date(sStr);
+    const e = new Date(eStr);
+    if (isNaN(s.getTime()) || isNaN(e.getTime()) || s > e) return 0;
+
+    let total = 0;
+    const cur = new Date(s);
+    while (cur <= e) {
+      const dow = cur.getDay();
+      const isWeekend = (dow === 0 || dow === 6);
+      const dateStr = cur.toISOString().split('T')[0];
+      const isHoliday = companyHolidays.includes(dateStr);
+      if (!isWeekend && !isHoliday) total++;
+      cur.setDate(cur.getDate() + 1);
+    }
+    return total;
   }
 
   function validateOnFly() {
-    const sInput = document.getElementById('startDate').value;
-    const eInput = document.getElementById('endDate').value;
-    if (!sInput || !eInput) return true;
+    const type = $('leaveTypeValue').value;
+    const s = $('startDate').value;
+    const e = $('endDate').value;
+    const badge = $('dayBadge');
 
-    const s = new Date(sInput + "T00:00:00");
-    const e = new Date(eInput + "T00:00:00");
+    if (s && e) {
+      const days = calcWorkingDays(s, e);
+      badge.textContent = `${days} Working Days`;
+      badge.classList.remove('hidden');
 
-    const type = document.getElementById('leaveTypeValue').value;
-    const file = document.getElementById('fileInput').files[0];
-    const card = document.getElementById('fileCard');
-    const dayBadge = document.getElementById('dayCount');
-
-    let totalWorkingDays = 0;
-    let current = new Date(s.getTime());
-
-    while (current.getTime() <= e.getTime()) {
-      const yyyy = current.getFullYear();
-      const mm = String(current.getMonth()+1).padStart(2,'0');
-      const dd = String(current.getDate()).padStart(2,'0');
-      const dateStr = `${yyyy}-${mm}-${dd}`;
-
-      const dayOfWeek = current.getDay();
-      const isWeekend = (dayOfWeek === 0 || dayOfWeek === 6);
-      const isHoliday = companyHolidays.includes(dateStr);
-
-      if (!isWeekend && !isHoliday) totalWorkingDays++;
-      current.setDate(current.getDate() + 1);
+      const file = $('fileInput').files[0];
+      const card = $('fileCard');
+      if (type === 'Sick' && days >= 3 && !file) {
+        card.classList.add('err');
+        $('fileTitle').textContent = "Medical Cert. Required! *";
+        $('fileTitle').classList.add('text-red-600');
+        return false;
+      } else {
+        card.classList.remove('err');
+        $('fileTitle').classList.remove('text-red-600');
+        return true;
+      }
     }
-
-    dayBadge.innerText = `${totalWorkingDays} Working Day(s)`;
-    dayBadge.classList.remove('hidden');
-
-    if (type === 'Sick' && totalWorkingDays >= 3 && !file) {
-      card.classList.add('field-error');
-      document.getElementById('fileTitle').innerText = "Medical Cert. Required! *";
-      document.getElementById('fileTitle').classList.add('text-red-600');
-      return false;
-    }
-
-    card.classList.remove('field-error');
-    document.getElementById('fileTitle').classList.remove('text-red-600');
-    if (!file) document.getElementById('fileTitle').innerText = "Attachment (Optional)";
     return true;
   }
 
-  // ================= Core: Submit via POST + Redirect =================
-  function postMultipartRedirect(fields, fileInputEl) {
-    if (!WEB_APP_URL || WEB_APP_URL.includes("PASTE_")) {
-      alert("Please set WEB_APP_URL in index.html");
-      return;
-    }
-
+  function buildAndSubmitForm(action, extraFields) {
     const form = document.createElement("form");
     form.method = "POST";
-    form.action = WEB_APP_URL;
+    form.action = `${API_URL}?action=${encodeURIComponent(action)}`;
     form.enctype = "multipart/form-data";
+    form.target = "submitFrame";
     form.style.display = "none";
 
-    Object.keys(fields).forEach(k => {
-      const inp = document.createElement("input");
-      inp.type = "hidden";
-      inp.name = k;
-      inp.value = fields[k] == null ? "" : String(fields[k]);
-      form.appendChild(inp);
-    });
+    const add = (k, v) => {
+      const input = document.createElement("input");
+      input.type = "hidden";
+      input.name = k;
+      input.value = v == null ? "" : String(v);
+      form.appendChild(input);
+    };
 
-    // attach file (if any)
-    if (fileInputEl && fileInputEl.files && fileInputEl.files[0]) {
-      const clone = fileInputEl.cloneNode(true);
-      // cloning does not keep file, so we must append original input by moving it temporarily
-      // safest: append the original input, then put it back after submit using a placeholder
-      const placeholder = document.createComment("file-placeholder");
-      fileInputEl.parentNode.insertBefore(placeholder, fileInputEl);
-      form.appendChild(fileInputEl);
+    add("action", action);
+    Object.keys(extraFields || {}).forEach(k => add(k, extraFields[k]));
 
-      document.body.appendChild(form);
-      form.submit();
-
-      // Note: page will navigate away, so restoring isn't necessary.
-      return;
-    }
+    const fileInput = $("fileInput");
+    form.appendChild(fileInput);
 
     document.body.appendChild(form);
     form.submit();
+
+    setTimeout(() => {
+      const holder = document.getElementById("fileCard");
+      if (holder && !holder.contains(fileInput)) holder.appendChild(fileInput);
+      fileInput.onchange = handleFileChange;
+      try { document.body.removeChild(form); } catch(e) {}
+    }, 300);
+
+    // If no postMessage within 12 sec => verify saved by requestId
+    setTimeout(async () => {
+      const loaderVisible = !document.getElementById("loader").classList.contains("hidden");
+      if (!loaderVisible) return;
+
+      if (!pendingRequestId) {
+        hideLoader();
+        alert("No response (missing requestId).");
+        return;
+      }
+
+      try {
+        const res = await fetch(API_URL + "?action=check_request&requestId=" + encodeURIComponent(pendingRequestId) + "&t=" + Date.now());
+        const data = await res.json();
+
+        if (data && data.ok && data.found) {
+          hideLoader();
+          openSuccessModal();
+          return;
+        }
+
+        hideLoader();
+        alert("No response. Cannot confirm saved. Please try again.");
+      } catch (e) {
+        hideLoader();
+        alert("No response. Verification failed. Please try again.");
+      }
+    }, 12000);
   }
 
   async function handleSubmit() {
-    const type = document.getElementById('leaveTypeValue').value;
-    const reason = document.getElementById('reason').value.trim();
-    const otherSpec = document.getElementById('otherSpecify').value.trim();
-    const startDate = document.getElementById('startDate').value;
-    const endDate = document.getElementById('endDate').value;
-    const dayPart = document.getElementById('durationValue').value || "Full Day";
+    const type = $('leaveTypeValue').value;
+    const startDate = $('startDate').value;
+    const endDate = $('endDate').value;
+    const reason = $('reason').value.trim();
+    const otherSpec = $('otherSpecify').value.trim();
 
     if (!type) return alert("Please select Leave Type");
-    if (!startDate || !endDate) return alert("Please select date range");
-    if (type === 'Other' && !otherSpec) return alert("Please specify the 'Other' leave type");
+    if (type === 'Other' && !otherSpec) return alert("Please specify Other type");
+    if (!startDate || !endDate) return alert("Please select dates");
     if (!reason) return alert("Please specify reason");
-    if (!validateOnFly()) return alert("Attachment required for Sick Leave >= 3 working days");
+    if (!validateOnFly()) return alert("Medical Certificate required!");
 
+    pendingRequestId = uuidv4();
     showLoader("Submitting...");
 
-    const p = profileCache;
-    const requestId = uuidv4();
-
-    // ✅ FIELD MAPPING => MATCH BACKEND
-    const fields = {
-      action: "submit_leave",
-      returnUrl: baseReturnUrl(),
-
-      requestId,
-
-      userId: p?.userId || "",
-      name: p?.displayName || "",
-      pictureUrl: p?.pictureUrl || "",
-
+    buildAndSubmitForm("submit_leave", {
+      requestId: pendingRequestId,
+      userId: userProfile?.userId || "",
+      name: userProfile?.displayName || "",
+      pictureUrl: userProfile?.pictureUrl || "",
       leaveType: type,
       otherSpecify: otherSpec,
-
       startDate,
       endDate,
-      dayPart,
+      dayPart: $('durationValue').value || "Full Day",
       reason
-    };
-
-    // this will navigate to WEB_APP_URL then redirect back
-    postMultipartRedirect(fields, document.getElementById('fileInput'));
+    });
   }
 
-  // ================= Approve flow (same page) =================
-  function enterApproveModeUI() {
-    document.getElementById('formArea').classList.add('hidden');
-    document.getElementById('submitBar').classList.add('hidden');
-    document.getElementById('approveArea').classList.remove('hidden');
-    const badge = document.getElementById('modeBadge');
-    badge.innerText = "MODE: APPROVE";
-    badge.classList.remove('hidden');
-  }
+  // Receive result from backend via postMessage (hidden iframe)
+  window.addEventListener("message", (event) => {
+    const frame = document.getElementById("submitFrame");
+    if (!frame || event.source !== frame.contentWindow) return;
 
-  function submitApprove() {
-    const reqId = qs("requestId") || "";
-    const decision = (qs("decision") || "").toUpperCase(); // APPROVE / REJECT
-    if (!reqId || !decision) return alert("Missing requestId/decision");
-
-    const actor = profileCache?.userId || "";
-    if (!actor) return alert("Cannot identify approver (no LIFF profile)");
-
-    showLoader("Submitting decision...");
-
-    const fields = {
-      action: "approve_leave",
-      returnUrl: baseReturnUrl(),
-
-      requestId: reqId,
-      decision,
-      actorUserId: actor
-    };
-
-    postMultipartRedirect(fields, null);
-  }
-
-  // ================= Handle Redirect Result =================
-  function handleRedirectResult() {
-    const ok = qs("ok");
-    if (!ok) return;
-
-    const mode = qs("mode") || "submit";
-    const requestId = qs("requestId") || "";
-    const status = qs("status") || "";
-    const err = qs("error") || "";
-
-    // clean URL (remove query so refresh won't show again)
-    const u = new URL(location.href);
-    u.search = "";
-    history.replaceState({}, "", u.toString());
+    const data = event.data || {};
+    if (!data || data.app !== "leave_backend") return;
 
     hideLoader();
 
-    if (ok === "1") {
-      if (mode === "approve") {
-        showModal("✅ Done", `Decision saved.\nRequestId: ${requestId}\nStatus: ${status || "-"}`);
-      } else {
-        showModal("✅ Submitted Successfully!", `Your request has been saved.\nRequestId: ${requestId}`);
-      }
+    if (data.ok) {
+      // ✅ Success => show minimal modal and exit on Done
+      openSuccessModal();
     } else {
-      showModal("❌ Failed", `Error: ${err || "unknown_error"}\nRequestId: ${requestId || "-"}`);
+      alert(data.error ? String(data.error) : "Submit failed");
+    }
+  });
+
+  async function handleApproveFlowIfAny() {
+    const params = new URLSearchParams(location.search);
+    const mode = params.get("mode");
+    const requestId = params.get("requestId");
+    const decision = params.get("decision");
+
+    if (mode === "approve") {
+      if (!requestId || !decision) return;
+
+      $("title").textContent = "Leave Approval";
+      $("userGreet").textContent = "Processing decision...";
+      showLoader("Approving...");
+
+      const profile = await liff.getProfile();
+      pendingRequestId = requestId;
+
+      buildAndSubmitForm("approve_leave", {
+        requestId,
+        decision,
+        actorUserId: profile.userId
+      });
     }
   }
 
-  // ================= LIFF Init =================
-  liff.init({ liffId: LIFF_ID }).then(async () => {
-    if (!liff.isLoggedIn()) liff.login();
+  async function init() {
+    await liff.init({ liffId: LIFF_ID });
+    if (!liff.isLoggedIn()) { liff.login(); return; }
 
-    const p = await liff.getProfile();
-    profileCache = p;
-
-    document.getElementById('userGreet').innerText = `Hi, ${p.displayName}`;
-    if (p.pictureUrl) {
-      document.getElementById('profileImg').src = p.pictureUrl;
-      document.getElementById('avatarBox').classList.remove('hidden');
+    userProfile = await liff.getProfile();
+    $('userGreet').textContent = `Hi, ${userProfile.displayName}`;
+    if (userProfile.pictureUrl) {
+      $('profileImg').src = userProfile.pictureUrl;
+      $('avatarBox').classList.remove('hidden');
     }
 
-    // init dates
-    const today = todayYmdLocal();
-    document.getElementById('startDate').value = today;
-    document.getElementById('endDate').value = today;
+    $("fileInput").setAttribute("name", "file");
+
+    const today = new Date().toISOString().split('T')[0];
+    $('startDate').value = today;
+    $('endDate').value = today;
+
+    await fetchHolidays();
     validateOnFly();
 
-    // If this page opened from Flex approve/reject
-    const mode = qs("mode");
-    if (mode === "approve") {
-      enterApproveModeUI();
-      document.getElementById('approveReqId').innerText = qs("requestId") || "-";
-      document.getElementById('approveDecision').innerText = (qs("decision") || "").toUpperCase() || "-";
-    }
+    await handleApproveFlowIfAny();
+    hideLoader();
+  }
 
-    // Show result if redirected back
-    handleRedirectResult();
-
-  }).catch(err => {
-    alert("LIFF init error: " + (err && err.message ? err.message : String(err)));
+  init().catch(err => {
+    console.error(err);
+    alert("LIFF init error: " + (err.message || err));
   });
 </script>
 </body>

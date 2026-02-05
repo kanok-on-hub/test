@@ -222,13 +222,18 @@
 
 <div id="successModal" class="fixed inset-0 hidden items-center justify-center z-[999] p-4">
   <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity"></div>
-  <div class="relative w-full max-w-sm bg-white rounded-[2rem] p-8 shadow-2xl text-center transform transition-all scale-100">
-    <div class="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
-       <span class="text-4xl">🎉</span>
+  
+  <div class="relative w-full max-w-[280px] bg-white rounded-3xl p-6 shadow-2xl text-center transform transition-all scale-100">
+    
+    <div class="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+       <span class="text-3xl">🎉</span>
     </div>
-    <h2 class="text-2xl font-extrabold text-slate-800 mb-2">Saved Successfully</h2>
-    <p class="text-slate-500 text-sm mb-8 leading-relaxed">Your request has been submitted.</p>
-    <button type="button" class="w-full bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600 text-white py-3.5 rounded-xl font-bold text-lg shadow-lg shadow-blue-500/30 transition-all" onclick="doneAndExit()">
+    
+    <h2 class="text-xl font-extrabold text-slate-800 mb-1">Saved Successfully</h2>
+    
+    <p class="text-slate-500 text-xs mb-5 leading-relaxed">Your request has been submitted.</p>
+    
+    <button type="button" class="w-full bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600 text-white py-3 rounded-xl font-bold text-sm shadow-lg shadow-blue-500/30 transition-all" onclick="doneAndExit()">
       Done
     </button>
   </div>

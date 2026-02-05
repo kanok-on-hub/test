@@ -4,156 +4,242 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0, viewport-fit=cover" />
   <title>Leave Request</title>
+  
   <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
   <script src="https://cdn.tailwindcss.com"></script>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  
   <style>
-    body { font-family: 'Inter', sans-serif; background:#f8fafc; color:#0f172a; -webkit-tap-highlight-color: transparent; }
-    .card { background:#fff; border-radius: 1rem; border:1px solid #e2e8f0; padding: 1rem; }
-    .type-btn { width:100%; text-align:left; padding: 1rem; border:1px solid #e2e8f0; border-radius: 1rem; background:#fff; transition: .2s; }
-    .type-btn.selected { border-color:#2563eb; background:#eff6ff; border-width:2px; }
-    .input { background:#f8fafc; border:1px solid #e2e8f0; border-radius:.75rem; padding:.75rem; width:100%; outline:none; }
-    .err { border:2px solid #ef4444 !important; background:#fef2f2 !important; }
+    /* Global Styles */
+    body { font-family: 'Plus Jakarta Sans', sans-serif; background:#f0f4f8; color:#1e293b; -webkit-tap-highlight-color: transparent; }
+    ::-webkit-scrollbar { width: 0px; background: transparent; }
+
+    /* Card */
+    .card { 
+      background: #ffffff; 
+      border-radius: 1.25rem; 
+      box-shadow: 0 4px 20px -2px rgba(226, 232, 240, 0.6); 
+      border: 1px solid #f1f5f9; 
+      padding: 1.25rem; 
+    }
+
+    /* Type Button */
+    .type-btn { 
+      width: 100%; text-align: left; padding: 1rem; 
+      border: 1px solid transparent; border-radius: 1rem; 
+      background: #f8fafc; color: #64748b;
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+      position: relative; overflow: hidden;
+    }
+    .type-btn:active { transform: scale(0.98); }
+    .type-btn.selected { 
+      border-color: #3b82f6; background: #eff6ff; color: #1d4ed8;
+      box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15); font-weight: 600;
+    }
+    .type-btn.selected::after {
+      content: '✓'; position: absolute; top: 8px; right: 10px; font-size: 12px; color: #2563eb;
+    }
+
+    /* Inputs */
+    .input { 
+      background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 0.75rem; 
+      padding: 0.875rem; width: 100%; outline: none; transition: all 0.2s;
+      font-size: 0.95rem; color: #334155;
+    }
+    .input:focus {
+      background: #ffffff; border-color: #3b82f6; 
+      box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1);
+    }
+    .err { 
+      border-color: #ef4444 !important; background-color: #fef2f2 !important; 
+      box-shadow: 0 0 0 4px rgba(239, 68, 68, 0.1) !important;
+    }
+
+    /* Badge Style */
+    .info-badge {
+      font-size: 11px; font-weight: 700;
+      background-color: #eff6ff; color: #2563eb; /* Blue-50, Blue-600 */
+      padding: 4px 12px; border-radius: 9999px;
+      border: 1px solid #dbeafe; /* Blue-100 */
+      box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+      display: inline-flex; align-items: center; white-space: nowrap;
+    }
+
+    /* Animation */
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(-5px); } to { opacity: 1; transform: translateY(0); } }
+    @keyframes shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-4px); } 75% { transform: translateX(4px); } }
+    .shake-anim { animation: shake 0.4s ease-in-out; }
   </style>
 </head>
 
-<body class="pb-28">
-<div class="max-w-md mx-auto">
+<body class="pb-32">
+<div class="max-w-md mx-auto min-h-screen flex flex-col">
 
-  <!-- Header -->
-  <div class="bg-white px-6 pt-10 pb-6 rounded-b-[2.5rem] shadow-sm border-b border-gray-100 mb-6">
+  <div class="bg-white px-6 pt-12 pb-8 rounded-b-[2.5rem] shadow-[0_10px_40px_-10px_rgba(0,0,0,0.05)] mb-6 relative z-10">
     <div class="flex items-center gap-4">
-      <div id="avatarBox" class="w-14 h-14 rounded-full overflow-hidden border-2 border-blue-50 hidden">
+      <div id="avatarBox" class="w-14 h-14 rounded-full overflow-hidden border-2 border-white shadow-lg ring-2 ring-blue-50 hidden transition-all hover:scale-105">
         <img id="profileImg" src="" class="w-full h-full object-cover">
       </div>
       <div>
-        <h1 id="title" class="text-xl font-bold">Leave Request 📝</h1>
-        <p id="userGreet" class="text-slate-500 text-sm font-medium">Loading...</p>
+        <h1 id="title" class="text-2xl font-bold text-slate-800 tracking-tight">Leave Request 📝</h1>
+        <p id="userGreet" class="text-slate-500 text-sm font-medium mt-0.5 flex items-center gap-1">
+          <span class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span> Loading...
+        </p>
       </div>
     </div>
   </div>
 
-  <!-- Form -->
-  <div class="px-5 space-y-6" id="formUI">
+  <div class="px-5 space-y-6 flex-1" id="formUI">
 
-    <!-- Leave Type -->
-    <div class="space-y-2">
-      <label class="text-sm font-bold text-slate-700 ml-1">Leave Type <span class="text-red-500">*</span></label>
+    <div class="space-y-3">
+      <div class="flex justify-between items-center px-1 h-7">
+        <label class="text-sm font-bold text-slate-700">Leave Type <span class="text-red-500">*</span></label>
+        
+        <span id="remainingBox" class="hidden info-badge animate-[fadeIn_0.3s_ease-out]">
+           Remaining:&nbsp;<span id="remainingValue" class="ml-0.5">-</span>
+        </span>
+      </div>
+      
       <div class="grid grid-cols-2 gap-3">
-        <button type="button" onclick="selectType(this,'Sick')" class="type-btn">🤒 <b>Sick</b></button>
-        <button type="button" onclick="selectType(this,'Annual')" class="type-btn">🏖️ <b>Annual</b></button>
-        <button type="button" onclick="selectType(this,'Personal')" class="type-btn">🚗 <b>Personal</b></button>
-        <button type="button" onclick="selectType(this,'Other')" class="type-btn">📝 <b>Other</b></button>
+        <button type="button" onclick="selectType(this,'Sick')" class="type-btn group">
+          <div class="text-2xl mb-1 group-hover:scale-110 transition-transform">🤒</div>
+          <span class="text-sm font-medium">Sick Leave</span>
+        </button>
+        <button type="button" onclick="selectType(this,'Annual')" class="type-btn group">
+          <div class="text-2xl mb-1 group-hover:scale-110 transition-transform">🏖️</div>
+          <span class="text-sm font-medium">Annual Leave</span>
+        </button>
+        <button type="button" onclick="selectType(this,'Personal')" class="type-btn group">
+          <div class="text-2xl mb-1 group-hover:scale-110 transition-transform">🚗</div>
+          <span class="text-sm font-medium">Personal</span>
+        </button>
+        <button type="button" onclick="selectType(this,'Other')" class="type-btn group">
+          <div class="text-2xl mb-1 group-hover:scale-110 transition-transform">📝</div>
+          <span class="text-sm font-medium">Other</span>
+        </button>
       </div>
       <input type="hidden" id="leaveTypeValue">
-      <!-- Remaining Info -->
-      <div id="remainingBox" class="text-xs text-slate-500 ml-1 mt-1 hidden">
-        Remaining: <span id="remainingValue">-</span> days
-      </div>
     </div>
 
-    <!-- Other Type -->
-    <div id="otherField" class="hidden space-y-2">
+    <div id="otherField" class="hidden space-y-2 animate-[fadeIn_0.3s_ease-out]">
       <label class="text-sm font-bold text-blue-600 ml-1 italic">Please specify Other type *</label>
       <input type="text" id="otherSpecify" class="input" placeholder="e.g. Ordination">
     </div>
 
-    <!-- Date -->
-    <div class="card space-y-3">
-      <div class="flex items-center justify-between">
+    <div class="card space-y-4">
+      <div class="flex items-center justify-between border-b border-slate-100 pb-3 h-10">
         <label class="text-sm font-bold text-slate-700">Date <span class="text-red-500">*</span></label>
-        <span id="dayBadge" class="text-[10px] font-bold bg-blue-100 text-blue-600 px-2 py-1 rounded-full hidden"></span>
+        
+        <span id="dayBadge" class="info-badge hidden">Working: 0 Days</span>
       </div>
 
       <div class="grid grid-cols-2 gap-4">
-        <div>
-          <div class="text-[10px] uppercase font-bold text-slate-400 mb-1">Start</div>
-          <input type="date" id="startDate" class="input text-center" onchange="validateOnFly()">
+        <div class="space-y-1.5">
+          <div class="text-[11px] uppercase tracking-wider font-bold text-slate-400">Start Date</div>
+          <input type="date" id="startDate" class="input text-center text-slate-700 font-medium cursor-pointer" onchange="validateOnFly()">
         </div>
-        <div>
-          <div class="text-[10px] uppercase font-bold text-slate-400 mb-1">End</div>
-          <input type="date" id="endDate" class="input text-center" onchange="validateOnFly()">
+        <div class="space-y-1.5">
+          <div class="text-[11px] uppercase tracking-wider font-bold text-slate-400">End Date</div>
+          <input type="date" id="endDate" class="input text-center text-slate-700 font-medium cursor-pointer" onchange="validateOnFly()">
         </div>
       </div>
 
-      <div class="text-[10px] text-slate-400 italic font-medium">* Weekends & Company Holidays excluded.</div>
+      <div id="quotaError" class="hidden bg-red-50 border border-red-100 rounded-lg p-3 flex items-start gap-3 shake-anim">
+        <div class="text-red-500 mt-0.5">⚠️</div>
+        <div>
+          <p class="text-xs font-bold text-red-600">Quota Exceeded</p>
+          <p class="text-[10px] text-red-500 leading-tight mt-0.5">
+            You requested <span id="reqDaysDisplay" class="font-bold"></span> days, but you only have <span id="remDaysDisplay" class="font-bold"></span> days remaining.
+          </p>
+        </div>
+      </div>
+
+      <div class="flex items-start gap-2 bg-slate-50 p-2.5 rounded-lg">
+        <span class="text-slate-400 mt-0.5">ℹ️</span>
+        <div class="text-[10px] text-slate-500 font-medium leading-relaxed">
+          Weekends & Company Holidays are automatically excluded from the calculation.
+        </div>
+      </div>
     </div>
 
-    <!-- Duration -->
-    <div class="card space-y-2">
+    <div class="card space-y-3">
       <label class="text-sm font-bold text-slate-700 block">Duration <span class="text-red-500">*</span></label>
-      <div class="flex bg-slate-100 p-1 rounded-xl">
-        <button type="button" onclick="selectDur(this,'Full Day')" class="dur-btn flex-1 py-2 text-sm font-bold rounded-lg bg-white shadow-sm text-blue-600">Full Day</button>
-        <button type="button" onclick="selectDur(this,'Morning')" class="dur-btn flex-1 py-2 text-sm font-medium text-slate-500">Morning</button>
-        <button type="button" onclick="selectDur(this,'Afternoon')" class="dur-btn flex-1 py-2 text-sm font-medium text-slate-500">Afternoon</button>
+      <div class="flex bg-slate-100 p-1.5 rounded-xl gap-1">
+        <button type="button" onclick="selectDur(this,'Full Day')" class="dur-btn flex-1 py-2.5 text-sm font-bold rounded-lg bg-white shadow-sm text-blue-600 ring-1 ring-black/5">Full Day</button>
+        <button type="button" onclick="selectDur(this,'Morning')" class="dur-btn flex-1 py-2.5 text-sm font-medium text-slate-500 hover:text-slate-700">Morning</button>
+        <button type="button" onclick="selectDur(this,'Afternoon')" class="dur-btn flex-1 py-2.5 text-sm font-medium text-slate-500 hover:text-slate-700">Afternoon</button>
       </div>
       <input type="hidden" id="durationValue" value="Full Day">
     </div>
 
-    <!-- Reason -->
     <div class="space-y-2">
       <label class="text-sm font-bold text-slate-700 ml-1">Reason <span class="text-red-500">*</span></label>
-      <textarea id="reason" rows="3" class="input" placeholder="Please specify reason..." oninput="validateOnFly()"></textarea>
+      <textarea id="reason" rows="3" class="input resize-none" placeholder="Please specify your reason clearly..." oninput="validateOnFly()"></textarea>
     </div>
 
-    <!-- Attachment -->
-    <div id="fileCard" class="card border-dashed border-2 flex items-center justify-between cursor-pointer"
+    <div id="fileCard" class="card border-dashed border-2 border-slate-200 hover:border-blue-400 hover:bg-blue-50/30 transition-colors flex items-center justify-between cursor-pointer group"
          onclick="document.getElementById('fileInput').click()">
-      <div class="flex items-center gap-3">
-        <div class="w-10 h-10 bg-blue-50 rounded-full flex items-center justify-center text-blue-500">📎</div>
+      <div class="flex items-center gap-4">
+        <div class="w-12 h-12 bg-blue-50 rounded-full flex items-center justify-center text-blue-500 group-hover:scale-110 transition-transform shadow-sm">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
+          </svg>
+        </div>
         <div>
-          <p id="fileTitle" class="text-sm font-bold text-slate-700">Attachment (Optional)</p>
-          <p class="text-[10px] text-slate-400 italic">Required if Sick Leave ≥ 3 working days</p>
+          <p id="fileTitle" class="text-sm font-bold text-slate-700 group-hover:text-blue-700 transition-colors">Attachment (Optional)</p>
+          <p class="text-[11px] text-slate-400 font-medium">Required if Sick Leave ≥ 3 days</p>
         </div>
       </div>
       <input type="file" id="fileInput" class="hidden" onchange="handleFileChange()" accept="image/*,application/pdf">
+      <div class="text-slate-300 group-hover:text-blue-400">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+        </svg>
+      </div>
     </div>
 
   </div>
 
-  <!-- Submit Button -->
-  <div class="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 p-4 pb-[calc(1rem+env(safe-area-inset-bottom))]">
-    <button id="submitBtn" onclick="handleSubmit()" class="w-full bg-blue-600 text-white py-4 rounded-2xl font-bold text-lg">Submit</button>
+  <div class="fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-md border-t border-slate-200 p-5 pb-[calc(1.25rem+env(safe-area-inset-bottom))] z-40">
+    <button id="submitBtn" onclick="handleSubmit()" class="w-full bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600 text-white py-4 rounded-2xl font-bold text-lg shadow-lg shadow-blue-500/30 active:scale-[0.98] transition-all">
+      Submit
+    </button>
   </div>
 </div>
 
-<!-- Loader -->
-<div id="loader" class="fixed inset-0 bg-white/80 backdrop-blur-sm hidden items-center justify-center z-50">
-  <div class="text-center">
-    <div class="w-10 h-10 border-4 border-slate-200 border-t-blue-600 rounded-full animate-spin mx-auto mb-3"></div>
-    <div class="font-bold text-slate-600" id="loaderText">Processing...</div>
+<div id="loader" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm hidden items-center justify-center z-50 transition-opacity">
+  <div class="bg-white p-6 rounded-2xl shadow-2xl flex flex-col items-center max-w-[150px]">
+    <div class="w-12 h-12 border-4 border-slate-100 border-t-blue-600 rounded-full animate-spin mb-3"></div>
+    <div class="font-bold text-slate-700 text-sm" id="loaderText">Processing...</div>
   </div>
 </div>
 
-<!-- Hidden iframe for submit -->
 <iframe id="submitFrame" name="submitFrame" class="hidden"></iframe>
 
-<!-- Success Modal -->
-<div id="successModal" class="fixed inset-0 hidden items-center justify-center z-[999]">
-  <div class="absolute inset-0 bg-black/40"></div>
-
-  <div class="relative w-[92%] max-w-sm bg-white rounded-3xl p-6 shadow-xl text-center">
-    <div class="text-2xl font-extrabold text-slate-900">Saved Successfully ✅</div>
-    <div class="mt-2 text-sm text-slate-600">Your request has been submitted.</div>
-
-    <button type="button"
-            class="mt-6 w-full bg-blue-600 text-white py-3 rounded-2xl font-bold text-lg"
-            onclick="doneAndExit()">
-      Done
+<div id="successModal" class="fixed inset-0 hidden items-center justify-center z-[999] p-4">
+  <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity"></div>
+  <div class="relative w-full max-w-sm bg-white rounded-[2rem] p-8 shadow-2xl text-center transform transition-all scale-100">
+    <div class="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
+       <span class="text-4xl">🎉</span>
+    </div>
+    <h2 class="text-2xl font-extrabold text-slate-800 mb-2">Saved Successfully</h2>
+    <p class="text-slate-500 text-sm mb-8 leading-relaxed">Your leave request has been sent to the system successfully.</p>
+    <button type="button" class="w-full bg-slate-900 text-white py-3.5 rounded-xl font-bold text-lg hover:bg-slate-800 transition-colors shadow-lg shadow-slate-900/20" onclick="doneAndExit()">
+      Close
     </button>
   </div>
 </div>
 
 <script>
-  // ======= CONFIG (ปรับแค่ตรงนี้สองค่า) =======
+  // ======= CONFIG =======
   const LIFF_ID = "2008997153-OdZGJzVg";
   const API_URL = "https://script.google.com/macros/s/AKfycbw3PCZGZG_puGPUY_FdDYAR765UUs8Wr2ERJDzXmOz-nOLt_V25JkUSdrWXNFNk3-h4/exec";
-  // =============================================
+  // ======================
 
   let companyHolidays = [];
   let userProfile = null;
-  let pendingRequestId = "";   // for fallback check_request
-  let leaveBalances = {};      // type -> remaining days
+  let pendingRequestId = "";   
+  let leaveBalances = {};      
 
   const $ = (id) => document.getElementById(id);
 
@@ -188,6 +274,13 @@
     }
   }
 
+  // [Helper] Convert YYYY-MM-DD to DD/MM/YYYY
+  function formatDateToThai(isoStr) {
+    if (!isoStr) return "";
+    const [y, m, d] = isoStr.split('-');
+    return `${d}/${m}/${y}`;
+  }
+
   function selectType(btn, val) {
     document.querySelectorAll('.type-btn').forEach(b => b.classList.remove('selected'));
     btn.classList.add('selected');
@@ -202,9 +295,10 @@
 
   function selectDur(btn, val) {
     document.querySelectorAll('.dur-btn').forEach(b => {
-      b.className = "dur-btn flex-1 py-2 text-sm font-medium text-slate-500";
+      b.className = "dur-btn flex-1 py-2.5 text-sm font-medium text-slate-500 hover:text-slate-700";
+      b.disabled = false;
     });
-    btn.className = "dur-btn flex-1 py-2 text-sm font-bold rounded-lg bg-white shadow-sm text-blue-600";
+    btn.className = "dur-btn flex-1 py-2.5 text-sm font-bold rounded-lg bg-white shadow-sm text-blue-600 ring-1 ring-black/5";
     $('durationValue').value = val;
     validateOnFly();
   }
@@ -212,7 +306,7 @@
   function handleFileChange() {
     const f = $('fileInput').files[0];
     if (f) {
-      $('fileTitle').textContent = f.name.length > 18 ? f.name.slice(0,18) + "..." : f.name;
+      $('fileTitle').textContent = f.name.length > 20 ? f.name.slice(0,20) + "..." : f.name;
       $('fileTitle').classList.add('text-blue-600');
     } else {
       $('fileTitle').textContent = "Attachment (Optional)";
@@ -221,9 +315,7 @@
     validateOnFly();
   }
 
-  // ===== Holiday / Balance Fetch =====
-
-  // ใช้ fetch ดึง holiday list
+  // ===== API Fetching =====
   async function fetchHolidays() {
     try {
       const res = await fetch(API_URL + "?action=get_holidays&t=" + Date.now());
@@ -231,11 +323,10 @@
       companyHolidays = Array.isArray(data) ? data : [];
     } catch (e) {
       companyHolidays = [];
-      console.warn("Holiday fetch failed, continue without holiday list", e);
+      console.warn("Holiday fetch failed", e);
     }
   }
 
-  // ดึง Leave Balance ของ user จาก backend
   async function fetchLeaveBalance(userId) {
     if (!userId) return;
     try {
@@ -259,7 +350,6 @@
     updateRemainingUI();
   }
 
-  // อัปเดต UI ของ Remaining
   function updateRemainingUI() {
     const type = $('leaveTypeValue').value;
     const box = $('remainingBox');
@@ -274,13 +364,14 @@
     if (remaining == null) {
       box.classList.add('hidden');
     } else {
-      valEl.textContent = remaining;
+      // [Grammar Fix] Dynamic Unit (Day vs Days)
+      const unit = (remaining === 1) ? "Day" : "Days";
+      valEl.textContent = `${remaining} ${unit}`;
       box.classList.remove('hidden');
     }
   }
 
-  // ===== Working Days =====
-
+  // ===== Logic =====
   function calcWorkingDays(sStr, eStr) {
     if (!sStr || !eStr) return 0;
     const s = new Date(sStr);
@@ -300,40 +391,59 @@
     return total;
   }
 
-  // ===== Validation (รวม Medical Cert + Remaining) =====
-
   function validateOnFly() {
     const type = $('leaveTypeValue').value;
     const s = $('startDate').value;
     const e = $('endDate').value;
     const badge = $('dayBadge');
+    const quotaError = $('quotaError');
 
-    // reset error state
+    // Reset UI
     $('startDate').classList.remove('err');
     $('endDate').classList.remove('err');
     $('fileCard').classList.remove('err');
     $('fileTitle').classList.remove('text-red-600');
+    quotaError.classList.add('hidden');
 
     if (!s || !e) {
       badge.classList.add('hidden');
       return true;
     }
 
-    // ถ้ายังไม่มี holiday list → แค่แสดงข้อความ
     if (!Array.isArray(companyHolidays) || companyHolidays.length === 0) {
-      badge.textContent = "Loading holidays...";
+      badge.textContent = "Loading...";
       badge.classList.remove('hidden');
       return true;
     }
 
     let days = calcWorkingDays(s, e);
-    // apply day part เหมือน backend
+    
+    // [Pro Feature] Auto Lock Duration for Multiple Days
+    const durBtns = document.querySelectorAll('.dur-btn');
+    if (days > 1) {
+       if ($('durationValue').value !== 'Full Day') {
+          selectDur(durBtns[0], 'Full Day');
+       }
+       durBtns[1].disabled = true;
+       durBtns[2].disabled = true;
+       durBtns[1].classList.add('opacity-40', 'cursor-not-allowed', 'bg-slate-50');
+       durBtns[2].classList.add('opacity-40', 'cursor-not-allowed', 'bg-slate-50');
+    } else {
+       durBtns[1].disabled = false;
+       durBtns[2].disabled = false;
+       durBtns[1].classList.remove('opacity-40', 'cursor-not-allowed', 'bg-slate-50');
+       durBtns[2].classList.remove('opacity-40', 'cursor-not-allowed', 'bg-slate-50');
+    }
+
+    // Apply half-day logic
     const dp = $('durationValue').value || "Full Day";
     if ((dp === "Morning" || dp === "Afternoon") && days > 0) {
       days -= 0.5;
     }
 
-    badge.textContent = `${days} Working Days`;
+    // [Grammar Fix] Dynamic Unit (Day vs Days)
+    const unit = (days === 1) ? "Day" : "Days";
+    badge.textContent = `Working: ${days} ${unit}`;
     badge.classList.remove('hidden');
 
     // 1) Medical cert rule
@@ -351,8 +461,11 @@
     if (type && remaining != null && days > 0 && days > remaining) {
       $('startDate').classList.add('err');
       $('endDate').classList.add('err');
-      badge.textContent = `${days} Working Days • Exceeds remaining (${remaining})`;
-      alert(`Requested leave (${days} days) exceeds remaining balance (${remaining} days).`);
+      
+      $('reqDaysDisplay').textContent = days;
+      $('remDaysDisplay').textContent = remaining;
+      
+      quotaError.classList.remove('hidden');
       return false;
     }
 
@@ -360,7 +473,6 @@
   }
 
   // ===== Submit =====
-
   function buildAndSubmitForm(action, extraFields) {
     const form = document.createElement("form");
     form.method = "POST";
@@ -393,7 +505,6 @@
       try { document.body.removeChild(form); } catch(e) {}
     }, 300);
 
-    // fallback: 12 วิแล้วยังไม่ตอบ → check_request
     setTimeout(async () => {
       const loaderVisible = !document.getElementById("loader").classList.contains("hidden");
       if (!loaderVisible) return;
@@ -407,18 +518,16 @@
       try {
         const res = await fetch(API_URL + "?action=check_request&requestId=" + encodeURIComponent(pendingRequestId) + "&t=" + Date.now());
         const data = await res.json();
-
         if (data && data.ok && data.found) {
           hideLoader();
           openSuccessModal();
           return;
         }
-
         hideLoader();
         alert("No response. Cannot confirm saved. Please try again.");
       } catch (e) {
         hideLoader();
-        alert("No response. Verification failed. Please try again.");
+        alert("Verification failed. Please try again.");
       }
     }, 12000);
   }
@@ -435,12 +544,22 @@
     if (!startDate || !endDate) { alert("Please select dates"); return; }
     if (!reason) { alert("Please specify reason"); return; }
     if (!validateOnFly()) {
-      // validateOnFly จะ alert เองตามเคส (Medical / Remaining)
+      alert("Please check errors (Red fields).");
       return;
     }
 
+    // [Pro Feature] Double Submit Protection
+    const btn = $('submitBtn');
+    btn.disabled = true;
+    btn.textContent = "Sending...";
+    btn.classList.add('opacity-70', 'cursor-not-allowed');
+
     pendingRequestId = uuidv4();
     showLoader("Submitting...");
+
+    // [New] Convert dates to DD/MM/YYYY for backend
+    const startDateThai = formatDateToThai(startDate);
+    const endDateThai = formatDateToThai(endDate);
 
     buildAndSubmitForm("submit_leave", {
       requestId: pendingRequestId,
@@ -449,31 +568,31 @@
       pictureUrl: userProfile?.pictureUrl || "",
       leaveType: type,
       otherSpecify: otherSpec,
-      startDate,
-      endDate,
+      startDate: startDateThai, 
+      endDate: endDateThai,    
       dayPart: $('durationValue').value || "Full Day",
       reason
     });
   }
 
-  // รับผลจาก backend ผ่าน iframe
   window.addEventListener("message", (event) => {
     const frame = document.getElementById("submitFrame");
     if (!frame || event.source !== frame.contentWindow) return;
-
     const data = event.data || {};
     if (!data || data.app !== "leave_backend") return;
 
     hideLoader();
-
     if (data.ok) {
       openSuccessModal();
     } else {
       alert(data.error ? String(data.error) : "Submit failed");
+      const btn = $('submitBtn');
+      btn.disabled = false;
+      btn.textContent = "Submit";
+      btn.classList.remove('opacity-70', 'cursor-not-allowed');
     }
   });
 
-  // Approval flow (ถ้ามี query mode=approve)
   async function handleApproveFlowIfAny() {
     const params = new URLSearchParams(location.search);
     const mode = params.get("mode");
@@ -482,7 +601,6 @@
 
     if (mode === "approve") {
       if (!requestId || !decision) return;
-
       $("title").textContent = "Leave Approval";
       $("userGreet").textContent = "Processing decision...";
       showLoader("Approving...");
@@ -498,26 +616,26 @@
     }
   }
 
-  // ===== init LIFF =====
-
   async function init() {
     await liff.init({ liffId: LIFF_ID });
     if (!liff.isLoggedIn()) { liff.login(); return; }
 
     userProfile = await liff.getProfile();
-    $('userGreet').textContent = `Hi, ${userProfile.displayName}`;
+    $('userGreet').innerHTML = `Hi, <span class="font-bold text-slate-800">${userProfile.displayName}</span>`;
     if (userProfile.pictureUrl) {
       $('profileImg').src = userProfile.pictureUrl;
       $('avatarBox').classList.remove('hidden');
     }
 
     $("fileInput").setAttribute("name", "file");
-
+    
+    // [Pro Feature] Set Min Date = Today
     const today = new Date().toISOString().split('T')[0];
     $('startDate').value = today;
     $('endDate').value = today;
+    $('startDate').setAttribute("min", today);
+    $('endDate').setAttribute("min", today);
 
-    // โหลด Leave Balance + Holidays แล้วค่อยคำนวณรอบแรก
     await fetchLeaveBalance(userProfile.userId);
     await fetchHolidays();
     validateOnFly();

@@ -58,9 +58,9 @@
     /* Badge Style */
     .info-badge {
       font-size: 11px; font-weight: 700;
-      background-color: #eff6ff; color: #2563eb; /* Blue-50, Blue-600 */
+      background-color: #eff6ff; color: #2563eb;
       padding: 4px 12px; border-radius: 9999px;
-      border: 1px solid #dbeafe; /* Blue-100 */
+      border: 1px solid #dbeafe;
       box-shadow: 0 1px 2px rgba(0,0,0,0.05);
       display: inline-flex; align-items: center; white-space: nowrap;
     }
@@ -94,7 +94,6 @@
     <div class="space-y-3">
       <div class="flex justify-between items-center px-1 h-7">
         <label class="text-sm font-bold text-slate-700">Leave Type <span class="text-red-500">*</span></label>
-        
         <span id="remainingBox" class="hidden info-badge animate-[fadeIn_0.3s_ease-out]">
            Remaining:&nbsp;<span id="remainingValue" class="ml-0.5">-</span>
         </span>
@@ -129,7 +128,6 @@
     <div class="card space-y-4">
       <div class="flex items-center justify-between border-b border-slate-100 pb-3 h-10">
         <label class="text-sm font-bold text-slate-700">Date <span class="text-red-500">*</span></label>
-        
         <span id="dayBadge" class="info-badge hidden">Working: 0 Days</span>
       </div>
 
@@ -197,6 +195,12 @@
         </svg>
       </div>
     </div>
+    
+    <div id="fileLinkBox" class="px-1 mt-1 text-[11px] text-slate-500 hidden">
+      Uploaded file: <a id="fileLink" href="#" target="_blank" class="text-blue-600 underline break-all"></a>
+    </div>
+    
+    <input type="hidden" id="attachmentUrlValue">
 
   </div>
 
@@ -223,9 +227,9 @@
        <span class="text-4xl">🎉</span>
     </div>
     <h2 class="text-2xl font-extrabold text-slate-800 mb-2">Saved Successfully</h2>
-    <p class="text-slate-500 text-sm mb-8 leading-relaxed">Your leave request has been sent to the system successfully.</p>
-    <button type="button" class="w-full bg-slate-900 text-white py-3.5 rounded-xl font-bold text-lg hover:bg-slate-800 transition-colors shadow-lg shadow-slate-900/20" onclick="doneAndExit()">
-      Close
+    <p class="text-slate-500 text-sm mb-8 leading-relaxed">Your request has been submitted.</p>
+    <button type="button" class="w-full bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600 text-white py-3.5 rounded-xl font-bold text-lg shadow-lg shadow-blue-500/30 transition-all" onclick="doneAndExit()">
+      Done
     </button>
   </div>
 </div>
@@ -240,6 +244,9 @@
   let userProfile = null;
   let pendingRequestId = "";   
   let leaveBalances = {};      
+  let uploadedAttachmentUrl = "";   
+  let uploadedFileName = "";        
+  let isUploading = false;          
 
   const $ = (id) => document.getElementById(id);
 
@@ -274,14 +281,12 @@
     }
   }
 
-  // [Helper] Convert YYYY-MM-DD to DD/MM/YYYY
   function formatDateToThai(isoStr) {
     if (!isoStr) return "";
     const [y, m, d] = isoStr.split('-');
     return `${d}/${m}/${y}`;
   }
 
-  // [Helper] Get Local YYYY-MM-DD (แก้ปัญหา UTC Timezone)
   function getLocalTodayDate() {
     const d = new Date();
     const year = d.getFullYear();
@@ -312,16 +317,88 @@
     validateOnFly();
   }
 
+  async function uploadAttachment(file) {
+    if (!file) return;
+    try {
+      isUploading = true;
+      showLoader("Uploading attachment...");
+
+      const fd = new FormData();
+      fd.append("action", "upload_attachment");
+      fd.append("file", file);
+      if (userProfile) {
+        fd.append("userId", userProfile.userId || "");
+        fd.append("userName", userProfile.displayName || "");
+      }
+      const s = $('startDate').value;
+      if (s) {
+        fd.append("startDate", formatDateToThai(s));
+      }
+
+      const res = await fetch(API_URL, {
+        method: "POST",
+        body: fd
+      });
+      const data = await res.json();
+      if (!data || !data.ok || !data.url) {
+        throw new Error(data && data.error ? data.error : "Upload failed");
+      }
+
+      // Success
+      uploadedAttachmentUrl = data.url;
+      uploadedFileName = data.fileName || file.name;
+      $('attachmentUrlValue').value = uploadedAttachmentUrl;
+
+      // Update UI
+      const titleEl = $('fileTitle');
+      titleEl.classList.remove('text-red-600');
+      titleEl.classList.add('text-blue-600');
+      titleEl.textContent = uploadedFileName.length > 20 ? uploadedFileName.slice(0,20) + "..." : uploadedFileName;
+
+      const linkBox = $('fileLinkBox');
+      const linkEl = $('fileLink');
+      linkEl.href = uploadedAttachmentUrl;
+      linkEl.textContent = uploadedAttachmentUrl;
+      linkBox.classList.remove('hidden');
+
+      $('fileCard').classList.remove('err');
+
+    } catch (err) {
+      console.error(err);
+      uploadedAttachmentUrl = "";
+      $('attachmentUrlValue').value = "";
+      $('fileTitle').textContent = "Upload failed. Tap to retry.";
+      $('fileTitle').classList.add('text-red-600');
+      alert("Upload attachment failed: " + (err.message || err));
+    } finally {
+      isUploading = false;
+      hideLoader();
+      validateOnFly();
+    }
+  }
+
   function handleFileChange() {
     const f = $('fileInput').files[0];
-    if (f) {
-      $('fileTitle').textContent = f.name.length > 20 ? f.name.slice(0,20) + "..." : f.name;
-      $('fileTitle').classList.add('text-blue-600');
-    } else {
+
+    // Reset UI
+    uploadedAttachmentUrl = "";
+    $('attachmentUrlValue').value = "";
+    $('fileLinkBox').classList.add('hidden');
+    $('fileCard').classList.remove('err');
+    $('fileTitle').classList.remove('text-red-600');
+
+    if (!f) {
       $('fileTitle').textContent = "Attachment (Optional)";
       $('fileTitle').classList.remove('text-blue-600');
+      validateOnFly();
+      return;
     }
-    validateOnFly();
+
+    $('fileTitle').textContent = "Uploading: " + (f.name.length > 16 ? f.name.slice(0,16) + "..." : f.name);
+    $('fileTitle').classList.add('text-blue-600');
+
+    // Trigger Upload via Fetch (Better for simple file upload than iframe)
+    uploadAttachment(f);
   }
 
   // ===== API Fetching =====
@@ -373,7 +450,6 @@
     if (remaining == null) {
       box.classList.add('hidden');
     } else {
-      // [Grammar] Auto Pluralization
       const unit = (remaining === 1) ? "Day" : "Days";
       valEl.textContent = `${remaining} ${unit}`;
       box.classList.remove('hidden');
@@ -419,7 +495,6 @@
       return true;
     }
 
-    // 🔒 Backdated Check (ใช้ getLocalTodayDate แทน)
     const todayIso = getLocalTodayDate(); 
     let hasBackdatedError = false;
 
@@ -435,7 +510,6 @@
     if (hasBackdatedError) {
       badge.textContent = "Backdated date is not allowed";
       badge.classList.remove('hidden');
-      // alert("Backdated leave date is not allowed."); // Uncomment if annoying
       return false;
     }
 
@@ -464,21 +538,19 @@
        durBtns[2].classList.remove('opacity-40', 'cursor-not-allowed', 'bg-slate-50');
     }
 
-    // Half-day logic
     const dp = $('durationValue').value || "Full Day";
     if ((dp === "Morning" || dp === "Afternoon") && days > 0) {
       days -= 0.5;
     }
 
-    // [Grammar] Auto Pluralization
     const unit = (days === 1) ? "Day" : "Days";
     badge.textContent = `Working: ${days} ${unit}`;
     badge.classList.remove('hidden');
 
-    // 1) Medical cert
-    const file = $('fileInput').files[0];
+    // 1) Medical cert (Check URL)
+    const hasAttachment = !!uploadedAttachmentUrl;
     const card = $('fileCard');
-    if (type === 'Sick' && days >= 3 && !file) {
+    if (type === 'Sick' && days >= 3 && !hasAttachment) {
       card.classList.add('err');
       $('fileTitle').textContent = "Medical Cert. Required! *";
       $('fileTitle').classList.add('text-red-600');
@@ -502,7 +574,8 @@
   }
 
   // ===== Submit =====
-  function buildAndSubmitForm(action, extraFields) {
+  function buildAndSubmitForm(action, extraFields, options) {
+    const opts = options || {};
     const form = document.createElement("form");
     form.method = "POST";
     form.action = `${API_URL}?action=${encodeURIComponent(action)}`;
@@ -521,47 +594,49 @@
     add("action", action);
     Object.keys(extraFields || {}).forEach(k => add(k, extraFields[k]));
 
-    const fileInput = $("fileInput");
-    form.appendChild(fileInput);
-
+    // Note: No file input appended here, link sent as string
     document.body.appendChild(form);
     form.submit();
 
     setTimeout(() => {
-      const holder = document.getElementById("fileCard");
-      if (holder && !holder.contains(fileInput)) holder.appendChild(fileInput);
-      fileInput.onchange = handleFileChange;
       try { document.body.removeChild(form); } catch(e) {}
     }, 300);
 
-    setTimeout(async () => {
-      const loaderVisible = !document.getElementById("loader").classList.contains("hidden");
-      if (!loaderVisible) return;
+    if (action === "submit_leave" && !opts.skipCheckRequest) {
+      setTimeout(async () => {
+        const loaderVisible = !document.getElementById("loader").classList.contains("hidden");
+        if (!loaderVisible) return;
 
-      if (!pendingRequestId) {
-        hideLoader();
-        alert("No response (missing requestId).");
-        return;
-      }
-
-      try {
-        const res = await fetch(API_URL + "?action=check_request&requestId=" + encodeURIComponent(pendingRequestId) + "&t=" + Date.now());
-        const data = await res.json();
-        if (data && data.ok && data.found) {
+        if (!pendingRequestId) {
           hideLoader();
-          openSuccessModal();
+          alert("No response (missing requestId).");
           return;
         }
-        hideLoader();
-        alert("No response. Cannot confirm saved. Please try again.");
-      } catch (e) {
-        hideLoader();
-        alert("Verification failed. Please try again.");
-      }
-    }, 12000);
+
+        try {
+          const res = await fetch(API_URL + "?action=check_request&requestId=" + encodeURIComponent(pendingRequestId) + "&t=" + Date.now());
+          const data = await res.json();
+          if (data && data.ok && data.found) {
+            hideLoader();
+            openSuccessModal();
+            return;
+          }
+          hideLoader();
+          alert("No response. Cannot confirm saved. Please try again.");
+        } catch (e) {
+          hideLoader();
+          alert("Verification failed. Please try again.");
+        }
+      }, 12000);
+    }
   }
 
   async function handleSubmit() {
+    if (isUploading) {
+      alert("Attachment is still uploading. Please wait a moment.");
+      return;
+    }
+
     const type = $('leaveTypeValue').value;
     const startDate = $('startDate').value;
     const endDate = $('endDate').value;
@@ -585,7 +660,6 @@
     pendingRequestId = uuidv4();
     showLoader("Submitting...");
 
-    // Convert Date to DD/MM/YYYY for backend
     const startDateThai = formatDateToThai(startDate);
     const endDateThai = formatDateToThai(endDate);
 
@@ -599,7 +673,11 @@
       startDate: startDateThai, 
       endDate: endDateThai,    
       dayPart: $('durationValue').value || "Full Day",
-      reason
+      reason,
+      attachmentUrl: uploadedAttachmentUrl 
+    }, {
+      includeFile: false,
+      skipCheckRequest: false
     });
   }
 
@@ -609,15 +687,26 @@
     const data = event.data || {};
     if (!data || data.app !== "leave_backend") return;
 
-    hideLoader();
-    if (data.ok) {
-      openSuccessModal();
-    } else {
-      alert(data.error ? String(data.error) : "Submit failed");
-      const btn = $('submitBtn');
-      btn.disabled = false;
-      btn.textContent = "Submit";
-      btn.classList.remove('opacity-70', 'cursor-not-allowed');
+    const mode = data.mode || "";
+
+    // If backend returns upload result via iframe (not used here since we fetch)
+    // but kept for safety if architecture changes back
+    if (mode === "upload") {
+       // ... logic same as fetch
+       return;
+    }
+
+    if (mode === "submit" || mode === "approve" || !mode) {
+      hideLoader();
+      if (data.ok) {
+        openSuccessModal();
+      } else {
+        alert(data.error ? String(data.error) : "Submit failed");
+        const btn = $('submitBtn');
+        btn.disabled = false;
+        btn.textContent = "Submit";
+        btn.classList.remove('opacity-70', 'cursor-not-allowed');
+      }
     }
   });
 
@@ -640,6 +729,9 @@
         requestId,
         decision,
         actorUserId: profile.userId
+      }, {
+        includeFile: false,
+        skipCheckRequest: true
       });
     }
   }
@@ -657,7 +749,6 @@
 
     $("fileInput").setAttribute("name", "file");
     
-    // Set Min Date = Today (ใช้ getLocalTodayDate เพื่อความแม่นยำ)
     const today = getLocalTodayDate();
     $('startDate').value = today;
     $('endDate').value = today;

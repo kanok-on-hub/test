@@ -75,7 +75,6 @@
 <body class="pb-32">
 <div class="max-w-md mx-auto min-h-screen flex flex-col">
 
-  <!-- Header -->
   <div class="bg-white px-6 pt-12 pb-8 rounded-b-[2.5rem] shadow-[0_10px_40px_-10px_rgba(0,0,0,0.05)] mb-6 relative z-10">
     <div class="flex items-center gap-4">
       <div id="avatarBox" class="w-14 h-14 rounded-full overflow-hidden border-2 border-white shadow-lg ring-2 ring-blue-50 hidden transition-all hover:scale-105">
@@ -90,13 +89,12 @@
     </div>
   </div>
 
-  <!-- FORM -->
   <div class="px-5 space-y-6 flex-1" id="formUI">
 
-    <!-- Leave Type -->
     <div class="space-y-3">
       <div class="flex justify-between items-center px-1 h-7">
         <label class="text-sm font-bold text-slate-700">Leave Type <span class="text-red-500">*</span></label>
+        
         <span id="remainingBox" class="hidden info-badge animate-[fadeIn_0.3s_ease-out]">
            Remaining:&nbsp;<span id="remainingValue" class="ml-0.5">-</span>
         </span>
@@ -123,16 +121,15 @@
       <input type="hidden" id="leaveTypeValue">
     </div>
 
-    <!-- Other Type -->
     <div id="otherField" class="hidden space-y-2 animate-[fadeIn_0.3s_ease-out]">
       <label class="text-sm font-bold text-blue-600 ml-1 italic">Please specify Other type *</label>
       <input type="text" id="otherSpecify" class="input" placeholder="e.g. Ordination">
     </div>
 
-    <!-- Date + Days -->
     <div class="card space-y-4">
       <div class="flex items-center justify-between border-b border-slate-100 pb-3 h-10">
         <label class="text-sm font-bold text-slate-700">Date <span class="text-red-500">*</span></label>
+        
         <span id="dayBadge" class="info-badge hidden">Working: 0 Days</span>
       </div>
 
@@ -165,7 +162,6 @@
       </div>
     </div>
 
-    <!-- Duration -->
     <div class="card space-y-3">
       <label class="text-sm font-bold text-slate-700 block">Duration <span class="text-red-500">*</span></label>
       <div class="flex bg-slate-100 p-1.5 rounded-xl gap-1">
@@ -176,49 +172,41 @@
       <input type="hidden" id="durationValue" value="Full Day">
     </div>
 
-    <!-- Reason -->
     <div class="space-y-2">
       <label class="text-sm font-bold text-slate-700 ml-1">Reason <span class="text-red-500">*</span></label>
       <textarea id="reason" rows="3" class="input resize-none" placeholder="Please specify your reason clearly..." oninput="validateOnFly()"></textarea>
     </div>
 
-    <!-- Attachment -->
-    <div class="card border-dashed border-2 border-slate-200 hover:border-blue-400 hover:bg-blue-50/30 transition-colors cursor-pointer group"
-         id="fileCard"
+    <!-- Attachment Card -->
+    <div id="fileCard" class="card border-dashed border-2 border-slate-200 hover:border-blue-400 hover:bg-blue-50/30 transition-colors flex items-center justify-between cursor-pointer group"
          onclick="document.getElementById('fileInput').click()">
-      <div class="flex items-center justify-between">
-        <div class="flex items-center gap-4">
-          <div class="w-12 h-12 bg-blue-50 rounded-full flex items-center justify-center text-blue-500 group-hover:scale-110 transition-transform shadow-sm">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
-            </svg>
-          </div>
-          <div>
-            <p id="fileTitle" class="text-sm font-bold text-slate-700 group-hover:text-blue-700 transition-colors">Attachment (Optional)</p>
-            <p class="text-[11px] text-slate-400 font-medium">Required if Sick Leave ≥ 3 days</p>
-          </div>
-        </div>
-        <div class="text-slate-300 group-hover:text-blue-400">
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+      <div class="flex items-center gap-4">
+        <div class="w-12 h-12 bg-blue-50 rounded-full flex items-center justify-center text-blue-500 group-hover:scale-110 transition-transform shadow-sm">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
           </svg>
         </div>
+        <div>
+          <p id="fileTitle" class="text-sm font-bold text-slate-700 group-hover:text-blue-700 transition-colors">Attachment (Optional)</p>
+          <p class="text-[11px] text-slate-400 font-medium">Required if Sick Leave ≥ 3 days</p>
+        </div>
       </div>
-
       <input type="file" id="fileInput" class="hidden" onchange="handleFileChange()" accept="image/*,application/pdf">
-
-      <!-- แสดงลิงก์หลังอัปโหลดสำเร็จ -->
-      <div id="attachmentInfo" class="mt-3 text-[11px] text-slate-500 hidden">
-        Uploaded:&nbsp;
-        <a id="attachmentLink" href="#" target="_blank" rel="noopener noreferrer" class="underline text-blue-600">
-          View file
-        </a>
+      <div class="text-slate-300 group-hover:text-blue-400">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+        </svg>
       </div>
+    </div>
+
+    <!-- Attachment Link Info -->
+    <div id="attachmentInfo" class="mt-1 text-[11px] text-slate-500 hidden">
+      <span class="font-semibold">Uploaded:</span>
+      <a id="attachmentLink" href="#" target="_blank" class="text-blue-600 underline break-all ml-1"></a>
     </div>
 
   </div>
 
-  <!-- Submit Bar -->
   <div class="fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-md border-t border-slate-200 p-5 pb-[calc(1.25rem+env(safe-area-inset-bottom))] z-40">
     <button id="submitBtn" onclick="handleSubmit()" class="w-full bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600 text-white py-4 rounded-2xl font-bold text-lg shadow-lg shadow-blue-500/30 active:scale-[0.98] transition-all">
       Submit
@@ -226,7 +214,6 @@
   </div>
 </div>
 
-<!-- Loader -->
 <div id="loader" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm hidden items-center justify-center z-50 transition-opacity">
   <div class="bg-white p-6 rounded-2xl shadow-2xl flex flex-col items-center max-w-[150px]">
     <div class="w-12 h-12 border-4 border-slate-100 border-t-blue-600 rounded-full animate-spin mb-3"></div>
@@ -234,11 +221,8 @@
   </div>
 </div>
 
-<!-- iframes แยกสำหรับ submit / upload -->
 <iframe id="submitFrame" name="submitFrame" class="hidden"></iframe>
-<iframe id="uploadFrame" name="uploadFrame" class="hidden"></iframe>
 
-<!-- Success Modal -->
 <div id="successModal" class="fixed inset-0 hidden items-center justify-center z-[999] p-4">
   <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity"></div>
   <div class="relative w-full max-w-sm bg-white rounded-[2rem] p-8 shadow-2xl text-center transform transition-all scale-100">
@@ -261,12 +245,10 @@
 
   let companyHolidays = [];
   let userProfile = null;
-  let pendingRequestId = "";
-  let leaveBalances = {};
-
-  let attachmentUrl = "";        // URL ที่ได้จาก upload_attachment
-  let attachmentFileName = "";   // ชื่อไฟล์หลังเซฟ
-  let uploadingAttachment = false;
+  let pendingRequestId = "";   
+  let leaveBalances = {};      
+  let attachmentUrl = "";
+  let attachmentFileName = "";
 
   const $ = (id) => document.getElementById(id);
 
@@ -278,6 +260,18 @@
   function hideLoader(){
     $("loader").classList.add("hidden");
     $("loader").classList.remove("flex");
+  }
+
+  function disableSubmit(disabled, text) {
+    const btn = $('submitBtn');
+    btn.disabled = disabled;
+    if (text) btn.textContent = text;
+    if (disabled) {
+      btn.classList.add('opacity-70', 'cursor-not-allowed');
+    } else {
+      btn.classList.remove('opacity-70', 'cursor-not-allowed');
+      btn.textContent = "Submit";
+    }
   }
 
   function uuidv4() {
@@ -301,14 +295,14 @@
     }
   }
 
-  // Convert YYYY-MM-DD to DD/MM/YYYY
+  // [Helper] Convert YYYY-MM-DD to DD/MM/YYYY
   function formatDateToThai(isoStr) {
     if (!isoStr) return "";
     const [y, m, d] = isoStr.split('-');
     return `${d}/${m}/${y}`;
   }
 
-  // Local today (แก้ปัญหา timezone)
+  // [Helper] Get Local YYYY-MM-DD
   function getLocalTodayDate() {
     const d = new Date();
     const year = d.getFullYear();
@@ -339,70 +333,29 @@
     validateOnFly();
   }
 
-  // ===== Attachment Upload (upload ก่อน แล้วค่อยเก็บ URL) =====
   function handleFileChange() {
     const f = $('fileInput').files[0];
-    const titleEl = $('fileTitle');
-    const card = $('fileCard');
-    const info = $('attachmentInfo');
-    const link = $('attachmentLink');
 
-    // reset error style
-    card.classList.remove('err');
-    titleEl.classList.remove('text-red-600');
+    // reset attachment state
+    attachmentUrl = "";
+    attachmentFileName = "";
+    $('attachmentInfo').classList.add('hidden');
+    $('attachmentLink').textContent = "";
+    $('attachmentLink').href = "#";
 
-    if (!f) {
-      titleEl.textContent = "Attachment (Optional)";
-      titleEl.classList.remove('text-blue-600');
-      attachmentUrl = "";
-      attachmentFileName = "";
-      info.classList.add('hidden');
-      validateOnFly();
-      return;
+    $('fileCard').classList.remove('err');
+    $('fileTitle').classList.remove('text-red-600');
+
+    if (f) {
+      const shortName = f.name.length > 20 ? f.name.slice(0,20) + "..." : f.name;
+      $('fileTitle').textContent = shortName;
+      $('fileTitle').classList.add('text-blue-600');
+      uploadAttachment();
+    } else {
+      $('fileTitle').textContent = "Attachment (Optional)";
+      $('fileTitle').classList.remove('text-blue-600');
     }
-
-    // แสดงชื่อไฟล์เบื้องต้น
-    const shortName = f.name.length > 20 ? f.name.slice(0,20) + "..." : f.name;
-    titleEl.textContent = shortName;
-    titleEl.classList.add('text-blue-600');
-
-    // เริ่ม upload
-    uploadingAttachment = true;
-    showLoader("Uploading attachment...");
-
-    const form = document.createElement("form");
-    form.method = "POST";
-    form.action = `${API_URL}?action=upload_attachment`;
-    form.enctype = "multipart/form-data";
-    form.target = "uploadFrame";
-    form.style.display = "none";
-
-    const add = (k, v) => {
-      const input = document.createElement("input");
-      input.type = "hidden";
-      input.name = k;
-      input.value = v == null ? "" : String(v);
-      form.appendChild(input);
-    };
-
-    add("action", "upload_attachment");
-    add("userId", userProfile?.userId || "");
-    add("userName", userProfile?.displayName || "");
-    add("dateStr", $('startDate').value || getLocalTodayDate());
-
-    const fileInput = $('fileInput');
-    form.appendChild(fileInput);
-
-    document.body.appendChild(form);
-    form.submit();
-
-    // เอา fileInput กลับมาไว้ใน card เหมือนเดิม
-    setTimeout(() => {
-      const holder = $('fileCard');
-      if (holder && !holder.contains(fileInput)) holder.appendChild(fileInput);
-      fileInput.onchange = handleFileChange;
-      try { document.body.removeChild(form); } catch(e) {}
-    }, 500);
+    validateOnFly();
   }
 
   // ===== API Fetching =====
@@ -420,7 +373,9 @@
   async function fetchLeaveBalance(userId) {
     if (!userId) return;
     try {
-      const res = await fetch(API_URL + "?action=get_balance&userId=" + encodeURIComponent(userId) + "&t=" + Date.now());
+      const res = await fetch(
+        API_URL + "?action=get_balance&userId=" + encodeURIComponent(userId) + "&t=" + Date.now()
+      );
       const data = await res.json();
       if (data && data.ok && Array.isArray(data.balances)) {
         leaveBalances = {};
@@ -496,7 +451,6 @@
       return true;
     }
 
-    // Backdated Check
     const todayIso = getLocalTodayDate(); 
     let hasBackdatedError = false;
 
@@ -523,24 +477,22 @@
 
     let days = calcWorkingDays(s, e);
     
-    // Lock Duration for multi-day
     const durBtns = document.querySelectorAll('.dur-btn');
     if (days > 1) {
-      if ($('durationValue').value !== 'Full Day') {
-        selectDur(durBtns[0], 'Full Day');
-      }
-      durBtns[1].disabled = true;
-      durBtns[2].disabled = true;
-      durBtns[1].classList.add('opacity-40', 'cursor-not-allowed', 'bg-slate-50');
-      durBtns[2].classList.add('opacity-40', 'cursor-not-allowed', 'bg-slate-50');
+       if ($('durationValue').value !== 'Full Day') {
+          selectDur(durBtns[0], 'Full Day');
+       }
+       durBtns[1].disabled = true;
+       durBtns[2].disabled = true;
+       durBtns[1].classList.add('opacity-40', 'cursor-not-allowed', 'bg-slate-50');
+       durBtns[2].classList.add('opacity-40', 'cursor-not-allowed', 'bg-slate-50');
     } else {
-      durBtns[1].disabled = false;
-      durBtns[2].disabled = false;
-      durBtns[1].classList.remove('opacity-40', 'cursor-not-allowed', 'bg-slate-50');
-      durBtns[2].classList.remove('opacity-40', 'cursor-not-allowed', 'bg-slate-50');
+       durBtns[1].disabled = false;
+       durBtns[2].disabled = false;
+       durBtns[1].classList.remove('opacity-40', 'cursor-not-allowed', 'bg-slate-50');
+       durBtns[2].classList.remove('opacity-40', 'cursor-not-allowed', 'bg-slate-50');
     }
 
-    // Half-day logic
     const dp = $('durationValue').value || "Full Day";
     if ((dp === "Morning" || dp === "Afternoon") && days > 0) {
       days -= 0.5;
@@ -550,7 +502,7 @@
     badge.textContent = `Working: ${days} ${unit}`;
     badge.classList.remove('hidden');
 
-    // 1) Medical cert (ตอนนี้เช็คจาก attachmentUrl = อัปสำเร็จแล้วเท่านั้น)
+    // 1) Medical cert: ใช้ attachmentUrl ไม่ใช่ไฟล์ตรงๆ
     const card = $('fileCard');
     if (type === 'Sick' && days >= 3 && !attachmentUrl) {
       card.classList.add('err');
@@ -575,8 +527,32 @@
     return true;
   }
 
-  // ===== Submit (ใบลา) =====
-  function buildAndSubmitForm(action, extraFields) {
+  // ===== Upload Attachment (upload-only phase) =====
+  function uploadAttachment() {
+    const f = $('fileInput').files[0];
+    if (!f) return;
+
+    if (!userProfile) {
+      alert("Profile not ready. Please reopen LIFF.");
+      return;
+    }
+
+    const startDate = $('startDate').value || getLocalTodayDate();
+
+    showLoader("Uploading attachment...");
+    disableSubmit(true, "Uploading...");
+
+    buildAndSubmitForm("upload_attachment", {
+      userId: userProfile.userId || "",
+      userName: userProfile.displayName || "",
+      dateStr: startDate
+    }, true);
+  }
+
+  // ===== Submit / Approve helper =====
+  function buildAndSubmitForm(action, extraFields, includeFile) {
+    includeFile = !!includeFile;
+
     const form = document.createElement("form");
     form.method = "POST";
     form.action = `${API_URL}?action=${encodeURIComponent(action)}`;
@@ -595,39 +571,55 @@
     add("action", action);
     Object.keys(extraFields || {}).forEach(k => add(k, extraFields[k]));
 
+    let fileInput = null;
+    if (includeFile) {
+      fileInput = $("fileInput");
+      form.appendChild(fileInput);
+    }
+
     document.body.appendChild(form);
     form.submit();
 
     setTimeout(() => {
+      if (includeFile && fileInput) {
+        const holder = document.getElementById("fileCard");
+        if (holder && !holder.contains(fileInput)) holder.appendChild(fileInput);
+        fileInput.onchange = handleFileChange;
+      }
       try { document.body.removeChild(form); } catch(e) {}
     }, 300);
 
-    // fallback: check_request ถ้าเงียบเกิน 12 วินาที
-    setTimeout(async () => {
-      const loaderVisible = !$("loader").classList.contains("hidden");
-      if (!loaderVisible) return;
+    // Fallback check เฉพาะ submit_leave เท่านั้น
+    if (action === "submit_leave") {
+      setTimeout(async () => {
+        const loaderVisible = !document.getElementById("loader").classList.contains("hidden");
+        if (!loaderVisible) return;
 
-      if (!pendingRequestId) {
-        hideLoader();
-        alert("No response (missing requestId).");
-        return;
-      }
-
-      try {
-        const res = await fetch(API_URL + "?action=check_request&requestId=" + encodeURIComponent(pendingRequestId) + "&t=" + Date.now());
-        const data = await res.json();
-        if (data && data.ok && data.found) {
+        if (!pendingRequestId) {
           hideLoader();
-          openSuccessModal();
+          alert("No response (missing requestId).");
+          disableSubmit(false);
           return;
         }
-        hideLoader();
-        alert("No response. Cannot confirm saved. Please try again.");
-      } catch (e) {
-        hideLoader();
-        alert("Verification failed. Please try again.");
-      }
-    }, 12000);
+
+        try {
+          const res = await fetch(API_URL + "?action=check_request&requestId=" + encodeURIComponent(pendingRequestId) + "&t=" + Date.now());
+          const data = await res.json();
+          if (data && data.ok && data.found) {
+            hideLoader();
+            openSuccessModal();
+            return;
+          }
+          hideLoader();
+          alert("No response. Cannot confirm saved. Please try again.");
+          disableSubmit(false);
+        } catch (e) {
+          hideLoader();
+          alert("Verification failed. Please try again.");
+          disableSubmit(false);
+        }
+      }, 12000);
+    }
   }
 
   async function handleSubmit() {
@@ -637,27 +629,34 @@
     const reason = $('reason').value.trim();
     const otherSpec = $('otherSpecify').value.trim();
 
-    if (uploadingAttachment) {
-      alert("Please wait until attachment upload is finished.");
-      return;
-    }
-
     if (!type) { alert("Please select Leave Type"); return; }
     if (type === 'Other' && !otherSpec) { alert("Please specify Other type"); return; }
     if (!startDate || !endDate) { alert("Please select dates"); return; }
     if (!reason) { alert("Please specify reason"); return; }
+
     if (!validateOnFly()) {
       alert("Please check errors (Red fields).");
       return;
     }
 
-    const btn = $('submitBtn');
-    btn.disabled = true;
-    btn.textContent = "Sending...";
-    btn.classList.add('opacity-70', 'cursor-not-allowed');
+    // ถ้าเป็น Sick >= 3 working days แต่ยังไม่มีลิงก์ → กันไว้เพิ่ม
+    const s = startDate;
+    const e = endDate;
+    let days = calcWorkingDays(s, e);
+    const dp = $('durationValue').value || "Full Day";
+    if ((dp === "Morning" || dp === "Afternoon") && days > 0) {
+      days -= 0.5;
+    }
+    if (type === 'Sick' && days >= 3 && !attachmentUrl) {
+      alert("Please upload medical certificate before submitting.");
+      $('fileCard').classList.add('err');
+      return;
+    }
+
+    disableSubmit(true, "Sending...");
+    showLoader("Submitting...");
 
     pendingRequestId = uuidv4();
-    showLoader("Submitting...");
 
     const startDateThai = formatDateToThai(startDate);
     const endDateThai = formatDateToThai(endDate);
@@ -669,70 +668,63 @@
       pictureUrl: userProfile?.pictureUrl || "",
       leaveType: type,
       otherSpecify: otherSpec,
-      startDate: startDateThai,
-      endDate: endDateThai,
+      startDate: startDateThai, 
+      endDate: endDateThai,    
       dayPart: $('durationValue').value || "Full Day",
       reason,
       attachmentUrl: attachmentUrl || ""
-    });
+    }, false);
   }
 
-  // ===== postMessage Listener =====
+  // ===== postMessage handler =====
   window.addEventListener("message", (event) => {
+    const frame = document.getElementById("submitFrame");
+    if (!frame || event.source !== frame.contentWindow) return;
     const data = event.data || {};
     if (!data || data.app !== "leave_backend") return;
 
-    // ---- upload_attachment result ----
+    // Upload attachment result
     if (data.mode === "upload") {
-      uploadingAttachment = false;
       hideLoader();
-
-      const info = $('attachmentInfo');
-      const link = $('attachmentLink');
-      const titleEl = $('fileTitle');
-
       if (data.ok && data.attachmentUrl) {
         attachmentUrl = data.attachmentUrl;
-        attachmentFileName = data.fileName || "Attachment";
+        attachmentFileName = data.fileName || "attachment";
 
-        link.href = attachmentUrl;
-        link.textContent = attachmentFileName;
-        info.classList.remove('hidden');
+        const shortName = attachmentFileName.length > 25
+          ? attachmentFileName.slice(0,25) + "..."
+          : attachmentFileName;
 
-        const shortName = attachmentFileName.length > 20 ? attachmentFileName.slice(0,20) + "..." : attachmentFileName;
-        titleEl.textContent = shortName;
-        titleEl.classList.add('text-blue-600');
+        $('fileTitle').textContent = shortName;
+        $('fileTitle').classList.remove('text-red-600');
+        $('fileTitle').classList.add('text-blue-600');
+
+        $('attachmentLink').textContent = attachmentUrl;
+        $('attachmentLink').href = attachmentUrl;
+        $('attachmentInfo').classList.remove('hidden');
 
         validateOnFly();
       } else {
         attachmentUrl = "";
         attachmentFileName = "";
-        info.classList.add('hidden');
-        $('fileInput').value = "";
-        titleEl.textContent = "Attachment (Optional)";
-        titleEl.classList.remove('text-blue-600');
-        alert(data.error ? ("Upload failed: " + data.error) : "Upload failed");
+        $('attachmentInfo').classList.add('hidden');
+        alert(data.error ? "Upload failed: " + data.error : "Upload failed.");
+        $('fileTitle').textContent = "Attachment (Optional)";
+        $('fileTitle').classList.remove('text-blue-600', 'text-red-600');
       }
+      disableSubmit(false);
       return;
     }
 
-    // ---- submit_leave / approve_leave result ----
-    if (data.mode === "submit" || data.mode === "approve") {
-      hideLoader();
-      if (data.ok) {
-        openSuccessModal();
-      } else {
-        alert(data.error ? String(data.error) : "Submit failed");
-        const btn = $('submitBtn');
-        btn.disabled = false;
-        btn.textContent = "Submit";
-        btn.classList.remove('opacity-70', 'cursor-not-allowed');
-      }
-      return;
+    // Submit / Approve result
+    hideLoader();
+    if (data.ok) {
+      openSuccessModal();
+    } else {
+      alert(data.error ? String(data.error) : "Submit failed");
+      disableSubmit(false);
     }
   });
 
-  // ===== Approve Flow (ถ้ามี) =====
   async function handleApproveFlowIfAny() {
     const params = new URLSearchParams(location.search);
     const mode = params.get("mode");
@@ -752,11 +744,10 @@
         requestId,
         decision,
         actorUserId: profile.userId
-      });
+      }, false);
     }
   }
 
-  // ===== init LIFF =====
   async function init() {
     await liff.init({ liffId: LIFF_ID });
     if (!liff.isLoggedIn()) { liff.login(); return; }

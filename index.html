@@ -58,9 +58,9 @@
     /* Badge Style */
     .info-badge {
       font-size: 11px; font-weight: 700;
-      background-color: #eff6ff; color: #2563eb; /* Blue-50, Blue-600 */
+      background-color: #eff6ff; color: #2563eb;
       padding: 4px 12px; border-radius: 9999px;
-      border: 1px solid #dbeafe; /* Blue-100 */
+      border: 1px solid #dbeafe;
       box-shadow: 0 1px 2px rgba(0,0,0,0.05);
       display: inline-flex; align-items: center; white-space: nowrap;
     }
@@ -129,7 +129,6 @@
     <div class="card space-y-4">
       <div class="flex items-center justify-between border-b border-slate-100 pb-3 h-10">
         <label class="text-sm font-bold text-slate-700">Date <span class="text-red-500">*</span></label>
-        
         <span id="dayBadge" class="info-badge hidden">Working: 0 Days</span>
       </div>
 
@@ -198,8 +197,11 @@
       </div>
     </div>
 
-    <!-- 🔒 ซ่อนลิงก์ไฟล์ที่อัปแล้วไว้ใน hidden input -->
-    <input type="hidden" id="attachmentUrl">
+    <!-- แสดงลิงก์หลังอัปโหลดเสร็จ -->
+    <div id="fileLinkBox" class="px-1 mt-1 text-[11px] text-slate-500 hidden">
+      Uploaded file:
+      <a id="fileLink" href="#" target="_blank" class="text-blue-600 underline break-all"></a>
+    </div>
 
   </div>
 
@@ -242,7 +244,9 @@
   let companyHolidays = [];
   let userProfile = null;
   let pendingRequestId = "";   
-  let leaveBalances = {};      
+  let leaveBalances = {};
+  let uploadedAttachmentUrl = "";   // NEW
+  let uploadedFileName = "";        // NEW
 
   const $ = (id) => document.getElementById(id);
 
@@ -316,90 +320,42 @@
   }
 
   function handleFileChange() {
-    const f = $('fileInput').files[0];
-
-    // reset error state + hidden url ก่อน
-    $('fileCard').classList.remove('err');
-    $('fileTitle').classList.remove('text-red-600');
-    // ไม่เคลียร์ attachmentUrl ทันที จะไปเคลียร์ใน uploadAttachment ตอน error
-    // $('attachmentUrl').value = "";
-
-    if (f) {
-      $('fileTitle').textContent = f.name.length > 20 ? f.name.slice(0,20) + "..." : f.name;
-      $('fileTitle').classList.add('text-blue-600');
-
-      // 🔼 เรียกอัปโหลดไฟล์จริงไป Apps Script
-      uploadAttachment().catch(err => {
-        console.error(err);
-        $('fileCard').classList.add('err');
-        $('fileTitle').textContent = "Upload failed, tap to retry";
-        $('fileTitle').classList.add('text-red-600');
-        alert("Upload attachment failed: " + (err.message || err));
-      });
-
-    } else {
-      $('fileTitle').textContent = "Attachment (Optional)";
-      $('fileTitle').classList.remove('text-blue-600');
-      $('attachmentUrl').value = "";
-    }
-    validateOnFly();
-  }
-
-  // 🔥 NEW: อัปโหลดไฟล์ไปที่ backend (upload_attachment) แล้วเก็บลิงก์ใน hidden input
-  async function uploadAttachment() {
     const fileInput = $('fileInput');
-    const file = fileInput.files[0];
-    if (!file) {
-      // กด cancel เลือกไฟล์ ไม่ต้องทำอะไร
+    const f = fileInput.files[0];
+
+    // reset state ก่อน
+    uploadedAttachmentUrl = "";
+    uploadedFileName = "";
+    const linkBox = $('fileLinkBox');
+    const linkEl = $('fileLink');
+    if (linkBox) linkBox.classList.add('hidden');
+    if (linkEl) {
+      linkEl.href = "#";
+      linkEl.textContent = "";
+    }
+
+    if (!f) {
+      $('fileTitle').textContent = "Attachment (Optional)";
+      $('fileTitle').classList.remove('text-blue-600', 'text-red-600');
+      validateOnFly();
       return;
     }
 
+    $('fileTitle').textContent = f.name.length > 20 ? f.name.slice(0,20) + "..." : f.name;
+    $('fileTitle').classList.add('text-blue-600');
+    $('fileCard').classList.remove('err');
+
+    // เริ่มอัปโหลดไป Apps Script (action=upload_attachment)
     showLoader("Uploading attachment...");
 
-    try {
-      const formData = new FormData();
-      formData.append("action", "upload_attachment");
-      formData.append("file", file);
-      formData.append("userId", userProfile?.userId || "");
-      formData.append("userName", userProfile?.displayName || "");
-
-      // ใช้วันที่ลาเพื่อไปประกอบชื่อไฟล์ใน backend (ต้องเป็น dd/MM/yyyy)
-      const startIso = $('startDate').value;
-      if (startIso) {
-        formData.append("startDate", formatDateToThai(startIso));
-      }
-
-      const res = await fetch(API_URL, {
-        method: "POST",
-        body: formData
-      });
-
-      if (!res.ok) {
-        throw new Error("HTTP " + res.status);
-      }
-
-      const data = await res.json();
-      if (!data.ok) {
-        // กรณี backend คืน {ok:false,error:"missing_file"}
-        $('attachmentUrl').value = "";
-        $('fileCard').classList.add('err');
-        $('fileTitle').classList.add('text-red-600');
-        $('fileTitle').textContent = "Upload failed, tap to retry";
-        throw new Error(data.error || "upload_failed");
-      }
-
-      // ✅ เก็บ URL ลง hidden field ไว้ส่งตอน submit_leave
-      $('attachmentUrl').value = data.url || "";
-
-      // เปลี่ยนสี title ให้ดูสำเร็จ
-      $('fileTitle').classList.remove('text-red-600');
-      $('fileTitle').classList.add('text-blue-600');
-      // ไม่จำเป็นต้อง alert สำเร็จ ให้มันเงียบ ๆ ก็พอ
-
-    } finally {
-      hideLoader();
-      validateOnFly();
-    }
+    buildAndSubmitForm("upload_attachment", {
+      userId: userProfile?.userId || "",
+      userName: userProfile?.displayName || "",
+      dateStr: $('startDate').value || getLocalTodayDate()
+    }, {
+      includeFile: true,
+      skipCheckRequest: true
+    });
   }
 
   // ===== API Fetching =====
@@ -496,7 +452,7 @@
       return true;
     }
 
-    // 🔒 Backdated Check ใช้ local date
+    // 🔒 Backdated Check
     const todayIso = getLocalTodayDate(); 
     let hasBackdatedError = false;
 
@@ -550,11 +506,9 @@
     badge.textContent = `Working: ${days} ${unit}`;
     badge.classList.remove('hidden');
 
-    // 1) Medical cert (ตอนนี้ถือว่า "มีแนบ" ถ้ามี attachmentUrl หรือไฟล์ใน input)
-    const file = $('fileInput').files[0];
-    const hasAttachment = !!($('attachmentUrl').value || file);
+    // 1) Medical cert (เช็กจาก uploadedAttachmentUrl แทนไฟล์ใน input)
+    const hasAttachment = !!uploadedAttachmentUrl;
     const card = $('fileCard');
-
     if (type === 'Sick' && days >= 3 && !hasAttachment) {
       card.classList.add('err');
       $('fileTitle').textContent = "Medical Cert. Required! *";
@@ -578,8 +532,9 @@
     return true;
   }
 
-  // ===== Submit =====
-  function buildAndSubmitForm(action, extraFields) {
+  // ===== Submit / Forms =====
+  function buildAndSubmitForm(action, extraFields, options) {
+    const opts = options || {};
     const form = document.createElement("form");
     form.method = "POST";
     form.action = `${API_URL}?action=${encodeURIComponent(action)}`;
@@ -598,45 +553,55 @@
     add("action", action);
     Object.keys(extraFields || {}).forEach(k => add(k, extraFields[k]));
 
-    // ยังแนบ fileInput ไว้เป็น fallback (แต่ backend ให้ priority กับ attachmentUrl อยู่แล้ว)
-    const fileInput = $("fileInput");
-    form.appendChild(fileInput);
+    let movedFileInput = null;
+    if (opts.includeFile) {
+      const fileInput = $("fileInput");
+      if (fileInput && fileInput.files && fileInput.files.length > 0) {
+        movedFileInput = fileInput;
+        form.appendChild(fileInput);
+      }
+    }
 
     document.body.appendChild(form);
     form.submit();
 
     setTimeout(() => {
-      const holder = document.getElementById("fileCard");
-      if (holder && !holder.contains(fileInput)) holder.appendChild(fileInput);
-      fileInput.onchange = handleFileChange;
+      if (movedFileInput) {
+        const holder = $("fileCard");
+        if (holder && !holder.contains(movedFileInput)) holder.appendChild(movedFileInput);
+        movedFileInput.onchange = handleFileChange;
+      }
       try { document.body.removeChild(form); } catch(e) {}
     }, 300);
 
-    setTimeout(async () => {
-      const loaderVisible = !document.getElementById("loader").classList.contains("hidden");
-      if (!loaderVisible) return;
+    // fallback check_request เฉพาะตอน submit_leave
+    if (action === "submit_leave" && !opts.skipCheckRequest) {
+      setTimeout(async () => {
+        const loaderVisible = !$("loader").classList.contains("hidden");
+        if (!loaderVisible) return;
 
-      if (!pendingRequestId) {
-        hideLoader();
-        alert("No response (missing requestId).");
-        return;
-      }
-
-      try {
-        const res = await fetch(API_URL + "?action=check_request&requestId=" + encodeURIComponent(pendingRequestId) + "&t=" + Date.now());
-        const data = await res.json();
-        if (data && data.ok && data.found) {
+        if (!pendingRequestId) {
           hideLoader();
-          openSuccessModal();
+          alert("No response (missing requestId).");
           return;
         }
-        hideLoader();
-        alert("No response. Cannot confirm saved. Please try again.");
-      } catch (e) {
-        hideLoader();
-        alert("Verification failed. Please try again.");
-      }
-    }, 12000);
+
+        try {
+          const res = await fetch(API_URL + "?action=check_request&requestId=" + encodeURIComponent(pendingRequestId) + "&t=" + Date.now());
+          const data = await res.json();
+          if (data && data.ok && data.found) {
+            hideLoader();
+            openSuccessModal();
+            return;
+          }
+          hideLoader();
+          alert("No response. Cannot confirm saved. Please try again.");
+        } catch (e) {
+          hideLoader();
+          alert("Verification failed. Please try again.");
+        }
+      }, 12000);
+    }
   }
 
   async function handleSubmit() {
@@ -663,7 +628,6 @@
     pendingRequestId = uuidv4();
     showLoader("Submitting...");
 
-    // Convert Date to DD/MM/YYYY for backend
     const startDateThai = formatDateToThai(startDate);
     const endDateThai = formatDateToThai(endDate);
 
@@ -675,29 +639,78 @@
       leaveType: type,
       otherSpecify: otherSpec,
       startDate: startDateThai, 
-      endDate: endDateThai,    
+      endDate: endDateThai,
       dayPart: $('durationValue').value || "Full Day",
       reason,
-      // 🔗 ส่งลิงก์ไฟล์ที่อัปโหลดไว้ (ถ้าไม่มีเป็น "")
-      attachmentUrl: $('attachmentUrl').value || ""
+      attachmentUrl: uploadedAttachmentUrl  // NEW: ส่งลิงก์อย่างเดียว
+    }, {
+      includeFile: false,
+      skipCheckRequest: false
     });
   }
 
   window.addEventListener("message", (event) => {
-    const frame = document.getElementById("submitFrame");
+    const frame = $("submitFrame");
     if (!frame || event.source !== frame.contentWindow) return;
     const data = event.data || {};
     if (!data || data.app !== "leave_backend") return;
 
-    hideLoader();
-    if (data.ok) {
-      openSuccessModal();
-    } else {
-      alert(data.error ? String(data.error) : "Submit failed");
-      const btn = $('submitBtn');
-      btn.disabled = false;
-      btn.textContent = "Submit";
-      btn.classList.remove('opacity-70', 'cursor-not-allowed');
+    const mode = data.mode || "";
+
+    // === เคสอัปโหลดไฟล์อย่างเดียว ===
+    if (mode === "upload") {
+      hideLoader();
+      const titleEl = $("fileTitle");
+
+      if (data.ok && data.attachmentUrl) {
+        uploadedAttachmentUrl = data.attachmentUrl;
+        uploadedFileName = data.fileName || (titleEl ? titleEl.textContent : "Attachment");
+
+        if (titleEl) {
+          const showName = uploadedFileName.length > 20 ? uploadedFileName.slice(0,20) + "..." : uploadedFileName;
+          titleEl.textContent = showName;
+          titleEl.classList.remove("text-red-600");
+          titleEl.classList.add("text-blue-600");
+        }
+
+        const linkBox = $("fileLinkBox");
+        const linkEl = $("fileLink");
+        if (linkBox && linkEl) {
+          linkEl.href = uploadedAttachmentUrl;
+          linkEl.textContent = uploadedAttachmentUrl;
+          linkBox.classList.remove("hidden");
+        }
+
+        $("fileCard").classList.remove("err");
+        validateOnFly();
+      } else {
+        uploadedAttachmentUrl = "";
+        uploadedFileName = "";
+        const fi = $("fileInput");
+        if (fi) fi.value = "";
+        if (titleEl) {
+          titleEl.textContent = "Attachment (Optional)";
+          titleEl.classList.remove("text-blue-600", "text-red-600");
+        }
+        alert(data.error ? "Upload failed: " + String(data.error) : "Upload failed");
+      }
+      return;
+    }
+
+    // === เคส submit / approve ===
+    if (mode === "submit" || mode === "approve" || !mode) {
+      hideLoader();
+      if (data.ok) {
+        openSuccessModal();
+      } else {
+        alert(data.error ? String(data.error) : "Submit failed");
+        const btn = $('submitBtn');
+        if (btn) {
+          btn.disabled = false;
+          btn.textContent = "Submit";
+          btn.classList.remove('opacity-70', 'cursor-not-allowed');
+        }
+      }
     }
   });
 
@@ -720,6 +733,9 @@
         requestId,
         decision,
         actorUserId: profile.userId
+      }, {
+        includeFile: false,
+        skipCheckRequest: true
       });
     }
   }
@@ -737,7 +753,6 @@
 
     $("fileInput").setAttribute("name", "file");
     
-    // Set Min Date = Today (ใช้ getLocalTodayDate เพื่อความแม่นยำ)
     const today = getLocalTodayDate();
     $('startDate').value = today;
     $('endDate').value = today;

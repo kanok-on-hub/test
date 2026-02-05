@@ -129,6 +129,7 @@
     <div class="card space-y-4">
       <div class="flex items-center justify-between border-b border-slate-100 pb-3 h-10">
         <label class="text-sm font-bold text-slate-700">Date <span class="text-red-500">*</span></label>
+        
         <span id="dayBadge" class="info-badge hidden">Working: 0 Days</span>
       </div>
 
@@ -176,31 +177,36 @@
       <textarea id="reason" rows="3" class="input resize-none" placeholder="Please specify your reason clearly..." oninput="validateOnFly()"></textarea>
     </div>
 
-    <div id="fileCard" class="card border-dashed border-2 border-slate-200 hover:border-blue-400 hover:bg-blue-50/30 transition-colors flex items-center justify-between cursor-pointer group"
+    <div id="fileCard" class="card border-dashed border-2 border-slate-200 hover:border-blue-400 hover:bg-blue-50/30 transition-colors cursor-pointer group"
          onclick="document.getElementById('fileInput').click()">
-      <div class="flex items-center gap-4">
-        <div class="w-12 h-12 bg-blue-50 rounded-full flex items-center justify-center text-blue-500 group-hover:scale-110 transition-transform shadow-sm">
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
+      <div class="flex items-center justify-between">
+        <div class="flex items-center gap-4">
+          <div class="w-12 h-12 bg-blue-50 rounded-full flex items-center justify-center text-blue-500 group-hover:scale-110 transition-transform shadow-sm">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
+            </svg>
+          </div>
+          <div>
+            <p id="fileTitle" class="text-sm font-bold text-slate-700 group-hover:text-blue-700 transition-colors">
+              Attachment (Optional)
+            </p>
+            <p class="text-[11px] text-slate-400 font-medium">Required if Sick Leave ≥ 3 days</p>
+          </div>
+        </div>
+        <div class="text-slate-300 group-hover:text-blue-400">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
           </svg>
         </div>
-        <div>
-          <p id="fileTitle" class="text-sm font-bold text-slate-700 group-hover:text-blue-700 transition-colors">Attachment (Optional)</p>
-          <p class="text-[11px] text-slate-400 font-medium">Required if Sick Leave ≥ 3 days</p>
-        </div>
       </div>
-      <input type="file" id="fileInput" class="hidden" onchange="handleFileChange()" accept="image/*,application/pdf">
-      <div class="text-slate-300 group-hover:text-blue-400">
-        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
-        </svg>
-      </div>
-    </div>
 
-    <!-- แสดงลิงก์หลังอัปโหลดเสร็จ -->
-    <div id="fileLinkBox" class="px-1 mt-1 text-[11px] text-slate-500 hidden">
-      Uploaded file:
-      <a id="fileLink" href="#" target="_blank" class="text-blue-600 underline break-all"></a>
+      <input type="file" id="fileInput" class="hidden" onchange="handleFileChange()" accept="image/*,application/pdf">
+
+      <!-- 🔗 แสดงลิงก์ไฟล์ที่อัปโหลดแล้ว -->
+      <div id="fileLinkBox" class="mt-3 text-[11px] text-blue-600 hidden break-all">
+        Uploaded:&nbsp;
+        <a id="fileLink" href="#" target="_blank" class="underline"></a>
+      </div>
     </div>
 
   </div>
@@ -244,9 +250,9 @@
   let companyHolidays = [];
   let userProfile = null;
   let pendingRequestId = "";   
-  let leaveBalances = {};
-  let uploadedAttachmentUrl = "";   // NEW
-  let uploadedFileName = "";        // NEW
+  let leaveBalances = {};      
+  let uploadedAttachmentUrl = "";   // 🔗 เก็บลิงก์ไฟล์ที่อัปโหลดแล้ว
+  let isUploading = false;          // flag กันกด submit ตอนกำลังอัปโหลด
 
   const $ = (id) => document.getElementById(id);
 
@@ -281,14 +287,14 @@
     }
   }
 
-  // [Helper] Convert YYYY-MM-DD to DD/MM/YYYY
+  // Convert YYYY-MM-DD -> DD/MM/YYYY
   function formatDateToThai(isoStr) {
     if (!isoStr) return "";
     const [y, m, d] = isoStr.split('-');
     return `${d}/${m}/${y}`;
   }
 
-  // [Helper] Get Local YYYY-MM-DD (แก้ปัญหา UTC Timezone)
+  // Local today YYYY-MM-DD
   function getLocalTodayDate() {
     const d = new Date();
     const year = d.getFullYear();
@@ -319,43 +325,45 @@
     validateOnFly();
   }
 
+  function resetAttachmentUI() {
+    uploadedAttachmentUrl = "";
+    const fileTitle = $('fileTitle');
+    const fileLinkBox = $('fileLinkBox');
+    const fileLink = $('fileLink');
+    const fileCard = $('fileCard');
+
+    if (fileTitle) {
+      fileTitle.textContent = "Attachment (Optional)";
+      fileTitle.classList.remove('text-blue-600');
+      fileTitle.classList.remove('text-red-600');
+    }
+    if (fileLinkBox) fileLinkBox.classList.add('hidden');
+    if (fileLink) {
+      fileLink.textContent = "";
+      fileLink.href = "#";
+    }
+    if (fileCard) fileCard.classList.remove('err');
+  }
+
   function handleFileChange() {
     const fileInput = $('fileInput');
     const f = fileInput.files[0];
 
-    // reset state ก่อน
-    uploadedAttachmentUrl = "";
-    uploadedFileName = "";
-    const linkBox = $('fileLinkBox');
-    const linkEl = $('fileLink');
-    if (linkBox) linkBox.classList.add('hidden');
-    if (linkEl) {
-      linkEl.href = "#";
-      linkEl.textContent = "";
-    }
+    resetAttachmentUI();
 
-    if (!f) {
+    if (f) {
+      const shortName = f.name.length > 20 ? f.name.slice(0,20) + "..." : f.name;
+      $('fileTitle').textContent = shortName;
+      $('fileTitle').classList.add('text-blue-600');
+
+      // เริ่มอัปโหลดไฟล์ทันที
+      uploadAttachment();
+    } else {
       $('fileTitle').textContent = "Attachment (Optional)";
-      $('fileTitle').classList.remove('text-blue-600', 'text-red-600');
-      validateOnFly();
-      return;
+      $('fileTitle').classList.remove('text-blue-600');
     }
 
-    $('fileTitle').textContent = f.name.length > 20 ? f.name.slice(0,20) + "..." : f.name;
-    $('fileTitle').classList.add('text-blue-600');
-    $('fileCard').classList.remove('err');
-
-    // เริ่มอัปโหลดไป Apps Script (action=upload_attachment)
-    showLoader("Uploading attachment...");
-
-    buildAndSubmitForm("upload_attachment", {
-      userId: userProfile?.userId || "",
-      userName: userProfile?.displayName || "",
-      dateStr: $('startDate').value || getLocalTodayDate()
-    }, {
-      includeFile: true,
-      skipCheckRequest: true
-    });
+    validateOnFly();
   }
 
   // ===== API Fetching =====
@@ -482,18 +490,18 @@
     // Auto Lock Duration
     const durBtns = document.querySelectorAll('.dur-btn');
     if (days > 1) {
-       if ($('durationValue').value !== 'Full Day') {
-          selectDur(durBtns[0], 'Full Day');
-       }
-       durBtns[1].disabled = true;
-       durBtns[2].disabled = true;
-       durBtns[1].classList.add('opacity-40', 'cursor-not-allowed', 'bg-slate-50');
-       durBtns[2].classList.add('opacity-40', 'cursor-not-allowed', 'bg-slate-50');
+      if ($('durationValue').value !== 'Full Day') {
+        selectDur(durBtns[0], 'Full Day');
+      }
+      durBtns[1].disabled = true;
+      durBtns[2].disabled = true;
+      durBtns[1].classList.add('opacity-40', 'cursor-not-allowed', 'bg-slate-50');
+      durBtns[2].classList.add('opacity-40', 'cursor-not-allowed', 'bg-slate-50');
     } else {
-       durBtns[1].disabled = false;
-       durBtns[2].disabled = false;
-       durBtns[1].classList.remove('opacity-40', 'cursor-not-allowed', 'bg-slate-50');
-       durBtns[2].classList.remove('opacity-40', 'cursor-not-allowed', 'bg-slate-50');
+      durBtns[1].disabled = false;
+      durBtns[2].disabled = false;
+      durBtns[1].classList.remove('opacity-40', 'cursor-not-allowed', 'bg-slate-50');
+      durBtns[2].classList.remove('opacity-40', 'cursor-not-allowed', 'bg-slate-50');
     }
 
     // Half-day logic
@@ -506,10 +514,9 @@
     badge.textContent = `Working: ${days} ${unit}`;
     badge.classList.remove('hidden');
 
-    // 1) Medical cert (เช็กจาก uploadedAttachmentUrl แทนไฟล์ใน input)
-    const hasAttachment = !!uploadedAttachmentUrl;
+    // 1) Medical cert: ใช้ลิงก์ที่อัปโหลดแล้วเป็นตัวเช็ค
     const card = $('fileCard');
-    if (type === 'Sick' && days >= 3 && !hasAttachment) {
+    if (type === 'Sick' && days >= 3 && !uploadedAttachmentUrl) {
       card.classList.add('err');
       $('fileTitle').textContent = "Medical Cert. Required! *";
       $('fileTitle').classList.add('text-red-600');
@@ -521,10 +528,8 @@
     if (type && remaining != null && days > 0 && days > remaining) {
       $('startDate').classList.add('err');
       $('endDate').classList.add('err');
-      
       $('reqDaysDisplay').textContent = days;
       $('remDaysDisplay').textContent = remaining;
-      
       quotaError.classList.remove('hidden');
       return false;
     }
@@ -532,9 +537,50 @@
     return true;
   }
 
-  // ===== Submit / Forms =====
-  function buildAndSubmitForm(action, extraFields, options) {
-    const opts = options || {};
+  // ===== Upload Attachment (อัปก่อน submit) =====
+  function uploadAttachment() {
+    const fileInput = $('fileInput');
+    const f = fileInput.files[0];
+    if (!f) return;
+
+    isUploading = true;
+    showLoader("Uploading attachment...");
+
+    const form = document.createElement("form");
+    form.method = "POST";
+    form.action = `${API_URL}?action=upload_attachment`;
+    form.enctype = "multipart/form-data";
+    form.target = "submitFrame";
+    form.style.display = "none";
+
+    const add = (k, v) => {
+      const input = document.createElement("input");
+      input.type = "hidden";
+      input.name = k;
+      input.value = v == null ? "" : String(v);
+      form.appendChild(input);
+    };
+
+    add("action", "upload_attachment");
+    add("userId", userProfile?.userId || "");
+    add("userName", userProfile?.displayName || "");
+    add("dateStr", $('startDate').value || getLocalTodayDate());
+
+    form.appendChild(fileInput);
+    document.body.appendChild(form);
+    form.submit();
+
+    // เอา fileInput กลับเข้าที่เดิมหลังส่ง form แล้ว
+    setTimeout(() => {
+      const holder = $("fileCard");
+      if (holder && !holder.contains(fileInput)) holder.appendChild(fileInput);
+      fileInput.onchange = handleFileChange;
+      try { document.body.removeChild(form); } catch(e) {}
+    }, 300);
+  }
+
+  // ===== Submit Leave =====
+  function buildAndSubmitForm(action, extraFields) {
     const form = document.createElement("form");
     form.method = "POST";
     form.action = `${API_URL}?action=${encodeURIComponent(action)}`;
@@ -553,31 +599,21 @@
     add("action", action);
     Object.keys(extraFields || {}).forEach(k => add(k, extraFields[k]));
 
-    let movedFileInput = null;
-    if (opts.includeFile) {
-      const fileInput = $("fileInput");
-      if (fileInput && fileInput.files && fileInput.files.length > 0) {
-        movedFileInput = fileInput;
-        form.appendChild(fileInput);
-      }
-    }
+    // สำหรับ submit_leave เราไม่จำเป็นต้องส่งไฟล์แล้ว (ใช้ลิงก์แทน)
+    // ถ้าอยากกันพลาดสามารถไม่ append fileInput เลย
+    // form.appendChild($("fileInput"));
 
     document.body.appendChild(form);
     form.submit();
 
     setTimeout(() => {
-      if (movedFileInput) {
-        const holder = $("fileCard");
-        if (holder && !holder.contains(movedFileInput)) holder.appendChild(movedFileInput);
-        movedFileInput.onchange = handleFileChange;
-      }
       try { document.body.removeChild(form); } catch(e) {}
     }, 300);
 
-    // fallback check_request เฉพาะตอน submit_leave
-    if (action === "submit_leave" && !opts.skipCheckRequest) {
+    // เคส submit_leave/approve ยังใช้ fallback check_request เดิมก็ได้ถ้าต้องการ
+    if (action === "submit_leave") {
       setTimeout(async () => {
-        const loaderVisible = !$("loader").classList.contains("hidden");
+        const loaderVisible = !document.getElementById("loader").classList.contains("hidden");
         if (!loaderVisible) return;
 
         if (!pendingRequestId) {
@@ -611,6 +647,11 @@
     const reason = $('reason').value.trim();
     const otherSpec = $('otherSpecify').value.trim();
 
+    if (isUploading) {
+      alert("Attachment is still uploading. Please wait a moment.");
+      return;
+    }
+
     if (!type) { alert("Please select Leave Type"); return; }
     if (type === 'Other' && !otherSpec) { alert("Please specify Other type"); return; }
     if (!startDate || !endDate) { alert("Please select dates"); return; }
@@ -639,78 +680,61 @@
       leaveType: type,
       otherSpecify: otherSpec,
       startDate: startDateThai, 
-      endDate: endDateThai,
+      endDate: endDateThai,    
       dayPart: $('durationValue').value || "Full Day",
       reason,
-      attachmentUrl: uploadedAttachmentUrl  // NEW: ส่งลิงก์อย่างเดียว
-    }, {
-      includeFile: false,
-      skipCheckRequest: false
+      attachmentUrl: uploadedAttachmentUrl || ""
     });
   }
 
+  // ===== Message from backend (iframe) =====
   window.addEventListener("message", (event) => {
-    const frame = $("submitFrame");
+    const frame = document.getElementById("submitFrame");
     if (!frame || event.source !== frame.contentWindow) return;
     const data = event.data || {};
     if (!data || data.app !== "leave_backend") return;
 
     const mode = data.mode || "";
 
-    // === เคสอัปโหลดไฟล์อย่างเดียว ===
+    // เคส Upload Attachment อย่างเดียว
     if (mode === "upload") {
       hideLoader();
-      const titleEl = $("fileTitle");
+      isUploading = false;
 
-      if (data.ok && data.attachmentUrl) {
-        uploadedAttachmentUrl = data.attachmentUrl;
-        uploadedFileName = data.fileName || (titleEl ? titleEl.textContent : "Attachment");
+      if (data.ok) {
+        // ต้องให้ backend ส่ง attachmentUrl + fileName มาใน payload ด้วย
+        const url = data.attachmentUrl || "";
+        const name = data.fileName || "Attachment";
 
-        if (titleEl) {
-          const showName = uploadedFileName.length > 20 ? uploadedFileName.slice(0,20) + "..." : uploadedFileName;
-          titleEl.textContent = showName;
-          titleEl.classList.remove("text-red-600");
-          titleEl.classList.add("text-blue-600");
+        if (url) {
+          uploadedAttachmentUrl = url;
+          const linkBox = $('fileLinkBox');
+          const linkEl = $('fileLink');
+          if (linkEl) {
+            linkEl.textContent = name;
+            linkEl.href = url;
+          }
+          if (linkBox) linkBox.classList.remove('hidden');
         }
-
-        const linkBox = $("fileLinkBox");
-        const linkEl = $("fileLink");
-        if (linkBox && linkEl) {
-          linkEl.href = uploadedAttachmentUrl;
-          linkEl.textContent = uploadedAttachmentUrl;
-          linkBox.classList.remove("hidden");
-        }
-
-        $("fileCard").classList.remove("err");
-        validateOnFly();
       } else {
-        uploadedAttachmentUrl = "";
-        uploadedFileName = "";
-        const fi = $("fileInput");
-        if (fi) fi.value = "";
-        if (titleEl) {
-          titleEl.textContent = "Attachment (Optional)";
-          titleEl.classList.remove("text-blue-600", "text-red-600");
-        }
-        alert(data.error ? "Upload failed: " + String(data.error) : "Upload failed");
+        alert(data.error ? ("Upload failed: " + data.error) : "Upload failed");
+        resetAttachmentUI();
+        const fileInput = $('fileInput');
+        if (fileInput) fileInput.value = "";
       }
       return;
     }
 
-    // === เคส submit / approve ===
-    if (mode === "submit" || mode === "approve" || !mode) {
-      hideLoader();
-      if (data.ok) {
-        openSuccessModal();
-      } else {
-        alert(data.error ? String(data.error) : "Submit failed");
-        const btn = $('submitBtn');
-        if (btn) {
-          btn.disabled = false;
-          btn.textContent = "Submit";
-          btn.classList.remove('opacity-70', 'cursor-not-allowed');
-        }
-      }
+    // เคส submit_leave / approve_leave
+    hideLoader();
+    if (data.ok) {
+      openSuccessModal();
+    } else {
+      alert(data.error ? String(data.error) : "Submit failed");
+      const btn = $('submitBtn');
+      btn.disabled = false;
+      btn.textContent = "Submit";
+      btn.classList.remove('opacity-70', 'cursor-not-allowed');
     }
   });
 
@@ -733,9 +757,6 @@
         requestId,
         decision,
         actorUserId: profile.userId
-      }, {
-        includeFile: false,
-        skipCheckRequest: true
       });
     }
   }

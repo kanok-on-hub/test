@@ -58,9 +58,9 @@
     /* Badge Style */
     .info-badge {
       font-size: 11px; font-weight: 700;
-      background-color: #eff6ff; color: #2563eb; /* Blue-50, Blue-600 */
+      background-color: #eff6ff; color: #2563eb;
       padding: 4px 12px; border-radius: 9999px;
-      border: 1px solid #dbeafe; /* Blue-100 */
+      border: 1px solid #dbeafe;
       box-shadow: 0 1px 2px rgba(0,0,0,0.05);
       display: inline-flex; align-items: center; white-space: nowrap;
     }
@@ -197,6 +197,8 @@
         </svg>
       </div>
     </div>
+    
+    <input type="hidden" id="attachmentUrlValue">
 
   </div>
 
@@ -240,6 +242,8 @@
   let userProfile = null;
   let pendingRequestId = "";   
   let leaveBalances = {};      
+  let attachmentUrl = "";       // NEW: เก็บลิงก์ไฟล์ที่อัปโหลดแล้ว
+  let isUploading = false;      // NEW: กันกด submit ระหว่างอัปโหลด
 
   const $ = (id) => document.getElementById(id);
 
@@ -281,7 +285,7 @@
     return `${d}/${m}/${y}`;
   }
 
-  // [Helper] Get Local YYYY-MM-DD (แก้ปัญหา UTC Timezone)
+  // [Helper] Get Local YYYY-MM-DD
   function getLocalTodayDate() {
     const d = new Date();
     const year = d.getFullYear();
@@ -312,16 +316,77 @@
     validateOnFly();
   }
 
+  // ===== Upload Attachment Logic =====
+  async function uploadAttachment(file) {
+    if (!file) return;
+    try {
+      isUploading = true;
+      showLoader("Uploading attachment...");
+
+      const fd = new FormData();
+      fd.append("action", "upload_attachment");
+      fd.append("file", file);
+      if (userProfile) {
+        fd.append("userId", userProfile.userId || "");
+        fd.append("userName", userProfile.displayName || "");
+      }
+      const s = $('startDate').value;
+      if (s) {
+        fd.append("startDate", formatDateToThai(s));
+      }
+
+      const res = await fetch(API_URL, {
+        method: "POST",
+        body: fd
+      });
+      const data = await res.json();
+      if (!data || !data.ok || !data.url) {
+        throw new Error(data && data.error ? data.error : "Upload failed");
+      }
+
+      attachmentUrl = data.url;
+      $('attachmentUrlValue').value = attachmentUrl;
+
+      // Update UI Success
+      $('fileTitle').classList.remove('text-red-600');
+      $('fileTitle').classList.add('text-blue-600');
+      $('fileTitle').textContent = file.name.length > 20 ? file.name.slice(0,20) + "..." : file.name;
+
+    } catch (err) {
+      console.error(err);
+      attachmentUrl = "";
+      $('attachmentUrlValue').value = "";
+      $('fileTitle').textContent = "Upload failed. Tap to retry.";
+      $('fileTitle').classList.add('text-red-600');
+      alert("Upload attachment failed: " + (err.message || err));
+    } finally {
+      isUploading = false;
+      hideLoader();
+      validateOnFly(); // Re-validate to clear error if any
+    }
+  }
+
   function handleFileChange() {
     const f = $('fileInput').files[0];
-    if (f) {
-      $('fileTitle').textContent = f.name.length > 20 ? f.name.slice(0,20) + "..." : f.name;
-      $('fileTitle').classList.add('text-blue-600');
-    } else {
+
+    // reset state
+    attachmentUrl = "";
+    $('attachmentUrlValue').value = "";
+    $('fileCard').classList.remove('err');
+    $('fileTitle').classList.remove('text-red-600');
+
+    if (!f) {
       $('fileTitle').textContent = "Attachment (Optional)";
       $('fileTitle').classList.remove('text-blue-600');
+      validateOnFly();
+      return;
     }
-    validateOnFly();
+
+    // Show uploading state text
+    $('fileTitle').textContent = "Uploading: " + (f.name.length > 16 ? f.name.slice(0,16) + "..." : f.name);
+    $('fileTitle').classList.add('text-blue-600');
+
+    uploadAttachment(f);
   }
 
   // ===== API Fetching =====
@@ -373,7 +438,6 @@
     if (remaining == null) {
       box.classList.add('hidden');
     } else {
-      // [Grammar] Auto Pluralization
       const unit = (remaining === 1) ? "Day" : "Days";
       valEl.textContent = `${remaining} ${unit}`;
       box.classList.remove('hidden');
@@ -419,7 +483,7 @@
       return true;
     }
 
-    // 🔒 Backdated Check (ใช้ getLocalTodayDate แทน)
+    // 🔒 Backdated Check
     const todayIso = getLocalTodayDate(); 
     let hasBackdatedError = false;
 
@@ -435,7 +499,6 @@
     if (hasBackdatedError) {
       badge.textContent = "Backdated date is not allowed";
       badge.classList.remove('hidden');
-      // alert("Backdated leave date is not allowed."); // Uncomment if annoying
       return false;
     }
 
@@ -470,15 +533,14 @@
       days -= 0.5;
     }
 
-    // [Grammar] Auto Pluralization
     const unit = (days === 1) ? "Day" : "Days";
     badge.textContent = `Working: ${days} ${unit}`;
     badge.classList.remove('hidden');
 
-    // 1) Medical cert
-    const file = $('fileInput').files[0];
+    // 1) Medical cert check (check URL value)
     const card = $('fileCard');
-    if (type === 'Sick' && days >= 3 && !file) {
+    const attachmentUrlVal = $('attachmentUrlValue').value.trim();
+    if (type === 'Sick' && days >= 3 && !attachmentUrlVal) {
       card.classList.add('err');
       $('fileTitle').textContent = "Medical Cert. Required! *";
       $('fileTitle').classList.add('text-red-600');
@@ -521,16 +583,12 @@
     add("action", action);
     Object.keys(extraFields || {}).forEach(k => add(k, extraFields[k]));
 
-    const fileInput = $("fileInput");
-    form.appendChild(fileInput);
-
+    // ❌ Corrected: We do NOT append fileInput here anymore
+    
     document.body.appendChild(form);
     form.submit();
 
     setTimeout(() => {
-      const holder = document.getElementById("fileCard");
-      if (holder && !holder.contains(fileInput)) holder.appendChild(fileInput);
-      fileInput.onchange = handleFileChange;
       try { document.body.removeChild(form); } catch(e) {}
     }, 300);
 
@@ -567,6 +625,12 @@
     const endDate = $('endDate').value;
     const reason = $('reason').value.trim();
     const otherSpec = $('otherSpecify').value.trim();
+    const attachmentUrlVal = $('attachmentUrlValue').value.trim();
+
+    if (isUploading) {
+      alert("Attachment is still uploading. Please wait a moment.");
+      return;
+    }
 
     if (!type) { alert("Please select Leave Type"); return; }
     if (type === 'Other' && !otherSpec) { alert("Please specify Other type"); return; }
@@ -599,7 +663,8 @@
       startDate: startDateThai, 
       endDate: endDateThai,    
       dayPart: $('durationValue').value || "Full Day",
-      reason
+      reason,
+      attachmentUrl: attachmentUrlVal 
     });
   }
 
@@ -657,7 +722,7 @@
 
     $("fileInput").setAttribute("name", "file");
     
-    // Set Min Date = Today (ใช้ getLocalTodayDate เพื่อความแม่นยำ)
+    // Set Min Date = Today
     const today = getLocalTodayDate();
     $('startDate').value = today;
     $('endDate').value = today;

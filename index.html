@@ -242,8 +242,7 @@
   let userProfile = null;
   let pendingRequestId = "";   
   let leaveBalances = {};      
-  let attachmentUrl = "";       // NEW: เก็บลิงก์ไฟล์ที่อัปโหลดแล้ว
-  let isUploading = false;      // NEW: กันกด submit ระหว่างอัปโหลด
+  let isUploading = false;      // กันกด submit ระหว่างอัปโหลด
 
   const $ = (id) => document.getElementById(id);
 
@@ -316,7 +315,7 @@
     validateOnFly();
   }
 
-  // ===== Upload Attachment Logic =====
+  // ===== Async Upload Logic =====
   async function uploadAttachment(file) {
     if (!file) return;
     try {
@@ -324,53 +323,52 @@
       showLoader("Uploading attachment...");
 
       const fd = new FormData();
-      fd.append("action", "upload_attachment");
+      fd.append("action", "upload_attachment"); // <-- Backend ต้องดัก action นี้
       fd.append("file", file);
+      
       if (userProfile) {
         fd.append("userId", userProfile.userId || "");
         fd.append("userName", userProfile.displayName || "");
       }
+      
+      // ส่งวันที่ไปด้วย (เผื่อตั้งชื่อโฟลเดอร์)
       const s = $('startDate').value;
       if (s) {
         fd.append("startDate", formatDateToThai(s));
       }
 
-      const res = await fetch(API_URL, {
-        method: "POST",
-        body: fd
-      });
+      const res = await fetch(API_URL, { method: "POST", body: fd });
       const data = await res.json();
+      
       if (!data || !data.ok || !data.url) {
         throw new Error(data && data.error ? data.error : "Upload failed");
       }
 
-      attachmentUrl = data.url;
-      $('attachmentUrlValue').value = attachmentUrl;
+      // Success: เก็บ URL
+      $('attachmentUrlValue').value = data.url;
 
-      // Update UI Success
+      // Update UI
       $('fileTitle').classList.remove('text-red-600');
       $('fileTitle').classList.add('text-blue-600');
       $('fileTitle').textContent = file.name.length > 20 ? file.name.slice(0,20) + "..." : file.name;
 
     } catch (err) {
       console.error(err);
-      attachmentUrl = "";
       $('attachmentUrlValue').value = "";
       $('fileTitle').textContent = "Upload failed. Tap to retry.";
       $('fileTitle').classList.add('text-red-600');
-      alert("Upload attachment failed: " + (err.message || err));
+      alert("Upload error: " + (err.message || err));
     } finally {
       isUploading = false;
       hideLoader();
-      validateOnFly(); // Re-validate to clear error if any
+      validateOnFly();
     }
   }
 
   function handleFileChange() {
     const f = $('fileInput').files[0];
 
-    // reset state
-    attachmentUrl = "";
+    // Reset state
     $('attachmentUrlValue').value = "";
     $('fileCard').classList.remove('err');
     $('fileTitle').classList.remove('text-red-600');
@@ -382,10 +380,11 @@
       return;
     }
 
-    // Show uploading state text
+    // UI Loading state
     $('fileTitle').textContent = "Uploading: " + (f.name.length > 16 ? f.name.slice(0,16) + "..." : f.name);
     $('fileTitle').classList.add('text-blue-600');
 
+    // Trigger Upload
     uploadAttachment(f);
   }
 
@@ -537,7 +536,7 @@
     badge.textContent = `Working: ${days} ${unit}`;
     badge.classList.remove('hidden');
 
-    // 1) Medical cert check (check URL value)
+    // 1) Medical cert check (Use URL)
     const card = $('fileCard');
     const attachmentUrlVal = $('attachmentUrlValue').value.trim();
     if (type === 'Sick' && days >= 3 && !attachmentUrlVal) {
@@ -583,7 +582,7 @@
     add("action", action);
     Object.keys(extraFields || {}).forEach(k => add(k, extraFields[k]));
 
-    // ❌ Corrected: We do NOT append fileInput here anymore
+    // Note: No fileInput appended here (URL is passed via extraFields)
     
     document.body.appendChild(form);
     form.submit();
@@ -649,7 +648,6 @@
     pendingRequestId = uuidv4();
     showLoader("Submitting...");
 
-    // Convert Date to DD/MM/YYYY for backend
     const startDateThai = formatDateToThai(startDate);
     const endDateThai = formatDateToThai(endDate);
 
@@ -664,7 +662,7 @@
       endDate: endDateThai,    
       dayPart: $('durationValue').value || "Full Day",
       reason,
-      attachmentUrl: attachmentUrlVal 
+      attachmentUrl: attachmentUrlVal // Pass the URL string
     });
   }
 

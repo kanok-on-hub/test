@@ -281,6 +281,15 @@
     return `${d}/${m}/${y}`;
   }
 
+  // [Helper] Get Local YYYY-MM-DD (แก้ปัญหา UTC Timezone)
+  function getLocalTodayDate() {
+    const d = new Date();
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  }
+
   function selectType(btn, val) {
     document.querySelectorAll('.type-btn').forEach(b => b.classList.remove('selected'));
     btn.classList.add('selected');
@@ -364,7 +373,7 @@
     if (remaining == null) {
       box.classList.add('hidden');
     } else {
-      // [Grammar Fix] Dynamic Unit (Day vs Days)
+      // [Grammar] Auto Pluralization
       const unit = (remaining === 1) ? "Day" : "Days";
       valEl.textContent = `${remaining} ${unit}`;
       box.classList.remove('hidden');
@@ -410,6 +419,26 @@
       return true;
     }
 
+    // 🔒 Backdated Check (ใช้ getLocalTodayDate แทน)
+    const todayIso = getLocalTodayDate(); 
+    let hasBackdatedError = false;
+
+    if (s < todayIso) {
+      $('startDate').classList.add('err');
+      hasBackdatedError = true;
+    }
+    if (e < todayIso) {
+      $('endDate').classList.add('err');
+      hasBackdatedError = true;
+    }
+
+    if (hasBackdatedError) {
+      badge.textContent = "Backdated date is not allowed";
+      badge.classList.remove('hidden');
+      // alert("Backdated leave date is not allowed."); // Uncomment if annoying
+      return false;
+    }
+
     if (!Array.isArray(companyHolidays) || companyHolidays.length === 0) {
       badge.textContent = "Loading...";
       badge.classList.remove('hidden');
@@ -418,7 +447,7 @@
 
     let days = calcWorkingDays(s, e);
     
-    // [Pro Feature] Auto Lock Duration for Multiple Days
+    // Auto Lock Duration
     const durBtns = document.querySelectorAll('.dur-btn');
     if (days > 1) {
        if ($('durationValue').value !== 'Full Day') {
@@ -435,18 +464,18 @@
        durBtns[2].classList.remove('opacity-40', 'cursor-not-allowed', 'bg-slate-50');
     }
 
-    // Apply half-day logic
+    // Half-day logic
     const dp = $('durationValue').value || "Full Day";
     if ((dp === "Morning" || dp === "Afternoon") && days > 0) {
       days -= 0.5;
     }
 
-    // [Grammar Fix] Dynamic Unit (Day vs Days)
+    // [Grammar] Auto Pluralization
     const unit = (days === 1) ? "Day" : "Days";
     badge.textContent = `Working: ${days} ${unit}`;
     badge.classList.remove('hidden');
 
-    // 1) Medical cert rule
+    // 1) Medical cert
     const file = $('fileInput').files[0];
     const card = $('fileCard');
     if (type === 'Sick' && days >= 3 && !file) {
@@ -456,7 +485,7 @@
       return false;
     }
 
-    // 2) Remaining balance rule
+    // 2) Balance check
     const remaining = (type && leaveBalances[type] != null) ? leaveBalances[type] : null;
     if (type && remaining != null && days > 0 && days > remaining) {
       $('startDate').classList.add('err');
@@ -548,7 +577,6 @@
       return;
     }
 
-    // [Pro Feature] Double Submit Protection
     const btn = $('submitBtn');
     btn.disabled = true;
     btn.textContent = "Sending...";
@@ -557,7 +585,7 @@
     pendingRequestId = uuidv4();
     showLoader("Submitting...");
 
-    // [New] Convert dates to DD/MM/YYYY for backend
+    // Convert Date to DD/MM/YYYY for backend
     const startDateThai = formatDateToThai(startDate);
     const endDateThai = formatDateToThai(endDate);
 
@@ -629,8 +657,8 @@
 
     $("fileInput").setAttribute("name", "file");
     
-    // [Pro Feature] Set Min Date = Today
-    const today = new Date().toISOString().split('T')[0];
+    // Set Min Date = Today (ใช้ getLocalTodayDate เพื่อความแม่นยำ)
+    const today = getLocalTodayDate();
     $('startDate').value = today;
     $('endDate').value = today;
     $('startDate').setAttribute("min", today);
